@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO2 Monitor Dashboard</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-online {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-offline {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .card-title {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .card-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .card-unit {
+            font-size: 1.2em;
+            color: #888;
+        }
+        
+        .card-status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-good {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .time-filter {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .time-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .time-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .download-btn {
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .download-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+            margin-top: 50px;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 CO2 Monitoring Dashboard</h1>
+            <p>Real-time Indoor Air Quality Monitor</p>
+            <span class="status-badge status-offline" id="connectionStatus">Connecting...</span>
+        </div>
+        
+        <div class="cards">
+            <div class="card">
+                <div class="card-title">Current CO2 Level</div>
+                <div class="card-value" id="currentCO2">--</div>
+                <div class="card-unit">ppm</div>
+                <div class="card-status status-good" id="statusText">Loading...</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Average (1 Hour)</div>
+                <div class="card-value" id="avgCO2">--</div>
+                <div class="card-unit">ppm</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Maximum (24 Hours)</div>
+                <div class="card-value" id="maxCO2">--</div>
+                <div class="card-unit">ppm</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Minimum (24 Hours)</div>
+                <div class="card-value" id="minCO2">--</div>
+                <div class="card-unit">ppm</div>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">CO2 Trend</div>
+                <div class="time-filter">
+                    <button class="time-btn active" onclick="changeTimeRange(1)">1 Hour</button>
+                    <button class="time-btn" onclick="changeTimeRange(6)">6 Hours</button>
+                    <button class="time-btn" onclick="changeTimeRange(24)">24 Hours</button>
+                    <button class="time-btn" onclick="changeTimeRange(168)">7 Days</button>
+                </div>
+            </div>
+            <canvas id="co2Chart"></canvas>
+        </div>
+        
+        <button class="download-btn" onclick="downloadCSV()">📥 Download Data (CSV)</button>
+        
+        <div class="last-update" id="lastUpdate">Last update: --</div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
+            authDomain: "co2-iot-727a9.firebaseapp.com",
+            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "co2-iot-727a9",
+            storageBucket: "co2-iot-727a9.firebasestorage.app",
+            messagingSenderId: "442178296251",
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e",
+            measurementId: "G-TZ5NLDGX2G"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const deviceID = "ESP32_01";
+        
+        let currentTimeRange = 1; // hours
+        let historyData = [];
+        let chart;
+        
+        // Initialize Chart
+        const ctx = document.getElementById('co2Chart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'CO2 Level (ppm)',
+                    data: [],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'CO2 (ppm)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Update status based on CO2 level
+        function updateStatus(ppm) {
+            const statusElement = document.getElementById('statusText');
+            const valueElement = document.getElementById('currentCO2');
+            
+            if (ppm < 800) {
+                statusElement.textContent = 'Good - Fresh Air';
+                statusElement.className = 'card-status status-good';
+                valueElement.style.color = '#10b981';
+            } else if (ppm >= 800 && ppm < 1200) {
+                statusElement.textContent = 'Warning - Ventilate';
+                statusElement.className = 'card-status status-warning';
+                valueElement.style.color = '#f59e0b';
+            } else {
+                statusElement.textContent = 'Danger - Poor Air Quality';
+                statusElement.className = 'card-status status-danger';
+                valueElement.style.color = '#ef4444';
+            }
+        }
+        
+        // Listen to latest data
+        database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const ppm = Math.round(data.value);
+                document.getElementById('currentCO2').textContent = ppm;
+                updateStatus(ppm);
+                
+                // Update timestamp
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = 
+                    `Last update: ${now.toLocaleString()}`;
+                
+                // Update connection status
+                document.getElementById('connectionStatus').textContent = 'Online';
+                document.getElementById('connectionStatus').className = 'status-badge status-online';
+            }
+        });
+        
+        // Listen to history data
+        database.ref(`sensors/${deviceID}/history`).on('value', (snapshot) => {
+            historyData = [];
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                historyData.push({
+                    timestamp: data.timestamp,
+                    value: data.value
+                });
+            });
+            
+            // Sort by timestamp
+            historyData.sort((a, b) => a.timestamp - b.timestamp);
+            
+            updateChart();
+            updateStats();
+        });
+        
+        // Update chart based on time range
+        function updateChart() {
+            const now = Date.now();
+            const cutoffTime = now - (currentTimeRange * 60 * 60 * 1000);
+            
+            const filteredData = historyData.filter(d => d.timestamp >= cutoffTime);
+            
+            const labels = filteredData.map(d => {
+                const date = new Date(d.timestamp);
+                return date.toLocaleTimeString();
+            });
+            
+            const values = filteredData.map(d => Math.round(d.value));
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.update();
+        }
+        
+        // Update statistics
+        function updateStats() {
+            if (historyData.length === 0) return;
+            
+            const now = Date.now();
+            const oneHourAgo = now - (1 * 60 * 60 * 1000);
+            const oneDayAgo = now - (24 * 60 * 60 * 1000);
+            
+            // Average (1 hour)
+            const lastHourData = historyData.filter(d => d.timestamp >= oneHourAgo);
+            if (lastHourData.length > 0) {
+                const avg = lastHourData.reduce((sum, d) => sum + d.value, 0) / lastHourData.length;
+                document.getElementById('avgCO2').textContent = Math.round(avg);
+            }
+            
+            // Max/Min (24 hours)
+            const lastDayData = historyData.filter(d => d.timestamp >= oneDayAgo);
+            if (lastDayData.length > 0) {
+                const values = lastDayData.map(d => d.value);
+                document.getElementById('maxCO2').textContent = Math.round(Math.max(...values));
+                document.getElementById('minCO2').textContent = Math.round(Math.min(...values));
+            }
+        }
+        
+        // Change time range
+        function changeTimeRange(hours) {
+            currentTimeRange = hours;
+            
+            // Update button states
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updateChart();
+        }
+        
+        // Download CSV
+        function downloadCSV() {
+            if (historyData.length === 0) {
+                alert('No data available to download');
+                return;
+            }
+            
+            let csv = 'Timestamp,DateTime,CO2 (ppm)\n';
+            
+            historyData.forEach(d => {
+                const date = new Date(d.timestamp);
+                csv += `${d.timestamp},${date.toLocaleString()},${d.value.toFixed(2)}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `CO2_data_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Check connection status
+        database.ref('.info/connected').on('value', (snapshot) => {
+            if (snapshot.val() === false) {
+                document.getElementById('connectionStatus').textContent = 'Offline';
+                document.getElementById('connectionStatus').className = 'status-badge status-offline';
+            }
+        });
+    </script>
+</body>
+</html>
