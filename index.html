@@ -129,6 +129,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .chart-title {
@@ -139,6 +141,7 @@
         .time-filter {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
         
         .time-btn {
@@ -160,6 +163,12 @@
         .time-btn.active {
             background: #667eea;
             color: white;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
         }
         
         .download-btn {
@@ -196,6 +205,14 @@
             font-size: 0.9em;
             opacity: 0.8;
         }
+        
+        .data-info {
+            text-align: center;
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 10px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -218,18 +235,21 @@
                 <div class="card-title">Average (1 Hour)</div>
                 <div class="card-value" id="avgCO2">--</div>
                 <div class="card-unit">ppm</div>
+                <div class="data-info" id="avgInfo">Menunggu data...</div>
             </div>
             
             <div class="card">
                 <div class="card-title">Maximum (24 Hours)</div>
                 <div class="card-value" id="maxCO2">--</div>
                 <div class="card-unit">ppm</div>
+                <div class="data-info" id="maxInfo">Menunggu data...</div>
             </div>
             
             <div class="card">
                 <div class="card-title">Minimum (24 Hours)</div>
                 <div class="card-value" id="minCO2">--</div>
                 <div class="card-unit">ppm</div>
+                <div class="data-info" id="minInfo">Menunggu data...</div>
             </div>
         </div>
         
@@ -243,7 +263,10 @@
                     <button class="time-btn" onclick="changeTimeRange(168)">7 Days</button>
                 </div>
             </div>
-            <canvas id="co2Chart"></canvas>
+            <div class="chart-container">
+                <canvas id="co2Chart"></canvas>
+            </div>
+            <div class="data-info" id="chartInfo">Memuat data history...</div>
         </div>
         
         <button class="download-btn" onclick="downloadCSV()">📥 Download Data (CSV)</button>
@@ -311,6 +334,9 @@
                         title: {
                             display: true,
                             text: 'Time'
+                        },
+                        ticks: {
+                            maxTicksLimit: 12
                         }
                     }
                 }
@@ -348,7 +374,7 @@
                 // Update timestamp
                 const now = new Date();
                 document.getElementById('lastUpdate').textContent = 
-                    `Last update: ${now.toLocaleString()}`;
+                    `Last update: ${now.toLocaleString('id-ID')}`;
                 
                 // Update connection status
                 document.getElementById('connectionStatus').textContent = 'Online';
@@ -370,6 +396,16 @@
             // Sort by timestamp
             historyData.sort((a, b) => a.timestamp - b.timestamp);
             
+            console.log(`Total data history: ${historyData.length} records`);
+            
+            if (historyData.length > 0) {
+                document.getElementById('chartInfo').textContent = 
+                    `Menampilkan ${historyData.length} data point`;
+            } else {
+                document.getElementById('chartInfo').textContent = 
+                    'Belum ada data history. Tunggu sensor mengirim data...';
+            }
+            
             updateChart();
             updateStats();
         });
@@ -381,9 +417,34 @@
             
             const filteredData = historyData.filter(d => d.timestamp >= cutoffTime);
             
+            if (filteredData.length === 0) {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+                document.getElementById('chartInfo').textContent = 
+                    `Tidak ada data untuk ${currentTimeRange} jam terakhir`;
+                return;
+            }
+            
             const labels = filteredData.map(d => {
                 const date = new Date(d.timestamp);
-                return date.toLocaleTimeString();
+                if (currentTimeRange <= 6) {
+                    return date.toLocaleTimeString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                } else if (currentTimeRange <= 24) {
+                    return date.toLocaleTimeString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                } else {
+                    return date.toLocaleDateString('id-ID', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit'
+                    });
+                }
             });
             
             const values = filteredData.map(d => Math.round(d.value));
@@ -391,11 +452,19 @@
             chart.data.labels = labels;
             chart.data.datasets[0].data = values;
             chart.update();
+            
+            document.getElementById('chartInfo').textContent = 
+                `Menampilkan ${filteredData.length} data point dari ${currentTimeRange} jam terakhir`;
         }
         
         // Update statistics
         function updateStats() {
-            if (historyData.length === 0) return;
+            if (historyData.length === 0) {
+                document.getElementById('avgInfo').textContent = 'Menunggu data...';
+                document.getElementById('maxInfo').textContent = 'Menunggu data...';
+                document.getElementById('minInfo').textContent = 'Menunggu data...';
+                return;
+            }
             
             const now = Date.now();
             const oneHourAgo = now - (1 * 60 * 60 * 1000);
@@ -406,14 +475,29 @@
             if (lastHourData.length > 0) {
                 const avg = lastHourData.reduce((sum, d) => sum + d.value, 0) / lastHourData.length;
                 document.getElementById('avgCO2').textContent = Math.round(avg);
+                document.getElementById('avgInfo').textContent = `${lastHourData.length} data point`;
+            } else {
+                document.getElementById('avgCO2').textContent = '--';
+                document.getElementById('avgInfo').textContent = 'Belum ada data 1 jam terakhir';
             }
             
             // Max/Min (24 hours)
             const lastDayData = historyData.filter(d => d.timestamp >= oneDayAgo);
             if (lastDayData.length > 0) {
                 const values = lastDayData.map(d => d.value);
-                document.getElementById('maxCO2').textContent = Math.round(Math.max(...values));
-                document.getElementById('minCO2').textContent = Math.round(Math.min(...values));
+                const maxVal = Math.max(...values);
+                const minVal = Math.min(...values);
+                
+                document.getElementById('maxCO2').textContent = Math.round(maxVal);
+                document.getElementById('minCO2').textContent = Math.round(minVal);
+                
+                document.getElementById('maxInfo').textContent = `${lastDayData.length} data point`;
+                document.getElementById('minInfo').textContent = `${lastDayData.length} data point`;
+            } else {
+                document.getElementById('maxCO2').textContent = '--';
+                document.getElementById('minCO2').textContent = '--';
+                document.getElementById('maxInfo').textContent = 'Belum ada data 24 jam terakhir';
+                document.getElementById('minInfo').textContent = 'Belum ada data 24 jam terakhir';
             }
         }
         
@@ -433,7 +517,7 @@
         // Download CSV
         function downloadCSV() {
             if (historyData.length === 0) {
-                alert('No data available to download');
+                alert('Tidak ada data untuk didownload');
                 return;
             }
             
@@ -441,7 +525,7 @@
             
             historyData.forEach(d => {
                 const date = new Date(d.timestamp);
-                csv += `${d.timestamp},${date.toLocaleString()},${d.value.toFixed(2)}\n`;
+                csv += `${d.timestamp},${date.toLocaleString('id-ID')},${d.value.toFixed(2)}\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -460,6 +544,10 @@
                 document.getElementById('connectionStatus').className = 'status-badge status-offline';
             }
         });
+        
+        // Log untuk debugging
+        console.log('Dashboard initialized');
+        console.log('Device ID:', deviceID);
     </script>
 </body>
 </html>
