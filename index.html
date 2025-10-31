@@ -233,21 +233,6 @@
             box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
         }
         
-        .loading {
-            text-align: center;
-            color: white;
-            font-size: 1.5em;
-            margin-top: 50px;
-        }
-        
-        .last-update {
-            text-align: center;
-            color: white;
-            margin-top: 20px;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-        
         .data-info {
             text-align: center;
             color: #888;
@@ -269,6 +254,15 @@
         .info-banner strong {
             font-size: 1.1em;
         }
+
+        .debug-info {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -287,6 +281,10 @@
         <div class="info-banner">
             <strong>Level 1: Real-time Dashboard</strong><br>
             Monitoring CO2 hari ini • Untuk melihat data tanggal tertentu, klik "Historical Data"
+        </div>
+
+        <div class="debug-info" id="debugInfo">
+            Loading...
         </div>
         
         <div class="header">
@@ -343,31 +341,36 @@
         </div>
         
         <button class="download-btn" onclick="downloadCSV()">📥 Download CSV Data</button>
-        
-        <div class="last-update" id="lastUpdate">Waiting for data...</div>
     </div>
 
-<script>
-        // Firebase Config
+    <script>
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
-            authDomain: "co2-iot-727a9.firebaseapp.com",
-            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "co2-iot-727a9",
-            storageBucket: "co2-iot-727a9.firebasestorage.app",
-            messagingSenderId: "442178296251",
-            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e",
-            measurementId: "G-TZ5NLDGX2G"
+            apiKey: "AIzaSyD3r5sBpC5XVWOxrfSyZeNv4r1wDICWjSo",
+            authDomain: "esp32-iot-d4b49.firebaseapp.com",
+            databaseURL: "https://esp32-iot-d4b49-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "esp32-iot-d4b49",
+            storageBucket: "esp32-iot-d4b49.firebasestorage.app",
+            messagingSenderId: "326383935527",
+            appId: "1:326383935527:web:5f9ffa9e9fb2e05d4cbef9"
         };
-
+        
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        
+        // PERBAIKAN: Device ID yang benar sesuai database
         const deviceID = "ESP32_01";
-
         
         let historyData = [];
-        let currentTimeRange = 6; // default 6 hours
+        let currentTimeRange = 6;
+        
+        // Update debug info
+        function updateDebug(message) {
+            const debugEl = document.getElementById('debugInfo');
+            const now = new Date().toLocaleTimeString('id-ID');
+            debugEl.innerHTML = `<strong>[${now}]</strong> ${message}`;
+        }
         
         // Initialize Chart
         const ctx = document.getElementById('co2Chart').getContext('2d');
@@ -449,12 +452,11 @@
                 document.getElementById('currentCO2').textContent = ppm;
                 updateStatus(ppm);
                 
-                // Update timestamp
-                const now = new Date();
-                document.getElementById('lastUpdate').textContent = 
-                    `Last update: ${now.toLocaleString('id-ID')}`;
+                const timestamp = data.timestamp;
+                const date = new Date(timestamp);
                 
-                // Update connection status
+                updateDebug(`Device: ${deviceID} | Latest: ${ppm} ppm | Time: ${date.toLocaleString('id-ID')}`);
+                
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
             }
@@ -471,17 +473,14 @@
                 });
             });
             
-            // Sort by timestamp
             historyData.sort((a, b) => a.timestamp - b.timestamp);
             
-            console.log(`Total data history: ${historyData.length} records`);
+            console.log(`Total data: ${historyData.length} records`);
             
             if (historyData.length > 0) {
-                document.getElementById('chartInfo').textContent = 
-                    `Menampilkan ${historyData.length} data point`;
-            } else {
-                document.getElementById('chartInfo').textContent = 
-                    'Belum ada data history. Tunggu sensor mengirim data...';
+                const firstDate = new Date(historyData[0].timestamp);
+                const lastDate = new Date(historyData[historyData.length - 1].timestamp);
+                console.log(`Data range: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
             }
             
             updateChart();
@@ -506,23 +505,10 @@
             
             const labels = filteredData.map(d => {
                 const date = new Date(d.timestamp);
-                if (currentTimeRange <= 6) {
-                    return date.toLocaleTimeString('id-ID', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                } else if (currentTimeRange <= 24) {
-                    return date.toLocaleTimeString('id-ID', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                } else {
-                    return date.toLocaleDateString('id-ID', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit'
-                    });
-                }
+                return date.toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
             });
             
             const values = filteredData.map(d => Math.round(d.value));
@@ -531,8 +517,11 @@
             chart.data.datasets[0].data = values;
             chart.update();
             
+            const firstDate = new Date(filteredData[0].timestamp);
+            const lastDate = new Date(filteredData[filteredData.length - 1].timestamp);
+            
             document.getElementById('chartInfo').textContent = 
-                `Menampilkan ${filteredData.length} data point dari ${currentTimeRange} jam terakhir`;
+                `Menampilkan ${filteredData.length} data point (${firstDate.toLocaleTimeString('id-ID')} - ${lastDate.toLocaleTimeString('id-ID')})`;
         }
         
         // Update statistics
@@ -583,7 +572,6 @@
         function changeTimeRange(hours) {
             currentTimeRange = hours;
             
-            // Update button states
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -615,7 +603,7 @@
             window.URL.revokeObjectURL(url);
         }
         
-        // Check connection status
+        // Check connection
         database.ref('.info/connected').on('value', (snapshot) => {
             if (snapshot.val() === false) {
                 document.getElementById('connectionStatus').textContent = 'Offline';
@@ -623,9 +611,7 @@
             }
         });
         
-        // Log untuk debugging
-        console.log('Dashboard initialized');
-        console.log('Device ID:', deviceID);
+        updateDebug(`Dashboard initialized | Device ID: ${deviceID}`);
     </script>
 </body>
 </html>
