@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Real-time</title>
+    <title>CO2 Monitor - Real-time (Fixed)</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -275,7 +275,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Navigation Menu -->
         <div class="nav-menu">
             <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
                 🌱 CO2 Monitor System
@@ -287,8 +286,8 @@
         </div>
 
         <div class="info-banner">
-            <strong>Level 1: Real-time Dashboard</strong><br>
-            Monitoring CO2 hari ini • Untuk melihat data tanggal tertentu, klik "Historical Data"
+            <strong>✅ Fixed Version - Optimized for 24/7 Operation</strong><br>
+            Menggunakan query terbatas & auto-refresh untuk monitoring jangka panjang
         </div>
 
         <div class="debug-info" id="debugInfo">
@@ -333,7 +332,7 @@
         
         <div class="chart-card">
             <div class="chart-header">
-                <div class="chart-title">CO2 Trend Today</div>
+                <div class="chart-title">CO2 Trend</div>
                 <div class="time-filter">
                     <button class="time-btn" onclick="changeTimeRange(1)">1 Hour</button>
                     <button class="time-btn" onclick="changeTimeRange(3)">3 Hours</button>
@@ -348,13 +347,12 @@
             <div class="data-info" id="chartInfo">Loading data...</div>
         </div>
         
-        <button class="download-btn" onclick="downloadCSV()">📥 Download CSV Data</button>
+        <button class="download-btn" onclick="downloadCSV()">📥 Download Today's Data (CSV)</button>
         
         <div class="last-update" id="lastUpdate">Waiting for data...</div>
     </div>
 
     <script>
-        // Firebase Configuration - KONFIGURASI YANG BENAR
         const firebaseConfig = {
             apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
             authDomain: "co2-iot-727a9.firebaseapp.com",
@@ -366,17 +364,14 @@
             measurementId: "G-TZ5NLDGX2G"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        
-        // Device ID
         const deviceID = "ESP32_01";
         
         let historyData = [];
         let currentTimeRange = 6;
+        let dataRefreshInterval;
         
-        // Update debug info
         function updateDebug(message) {
             const debugEl = document.getElementById('debugInfo');
             const now = new Date().toLocaleTimeString('id-ID');
@@ -435,7 +430,6 @@
             }
         });
         
-        // Update status based on CO2 level
         function updateStatus(ppm) {
             const statusElement = document.getElementById('statusText');
             const valueElement = document.getElementById('currentCO2');
@@ -469,37 +463,50 @@
                 document.getElementById('lastUpdate').textContent = 
                     `Last update: ${date.toLocaleString('id-ID')}`;
                 
-                updateDebug(`Device: ${deviceID} | Latest: ${ppm} ppm | Time: ${date.toLocaleString('id-ID')}`);
+                updateDebug(`✅ Device: ${deviceID} | Latest: ${ppm} ppm | Time: ${date.toLocaleString('id-ID')}`);
                 
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
             }
         });
         
-        // Listen to history data
-        database.ref(`sensors/${deviceID}/history`).on('value', (snapshot) => {
-            historyData = [];
-            snapshot.forEach((childSnapshot) => {
-                const data = childSnapshot.val();
-                historyData.push({
-                    timestamp: data.timestamp,
-                    value: data.value
+        // FIXED: Load history data dengan query time-based yang lebih efisien
+        function loadHistoryData() {
+            const now = Date.now();
+            const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+            
+            // Query hanya data 24 jam terakhir, ordered by timestamp
+            database.ref(`sensors/${deviceID}/history`)
+                .orderByChild('timestamp')
+                .startAt(twentyFourHoursAgo)
+                .once('value', (snapshot) => {
+                    historyData = [];
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        const data = childSnapshot.val();
+                        historyData.push({
+                            timestamp: data.timestamp,
+                            value: data.value
+                        });
+                    });
+                    
+                    historyData.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    updateDebug(`📊 Loaded ${historyData.length} data points (last 24h)`);
+                    
+                    if (historyData.length > 0) {
+                        const firstDate = new Date(historyData[0].timestamp);
+                        const lastDate = new Date(historyData[historyData.length - 1].timestamp);
+                        console.log(`Data range: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
+                    }
+                    
+                    updateChart();
+                    updateStats();
+                })
+                .catch(error => {
+                    updateDebug(`❌ ERROR: ${error.message}`);
                 });
-            });
-            
-            historyData.sort((a, b) => a.timestamp - b.timestamp);
-            
-            console.log(`Total data: ${historyData.length} records`);
-            
-            if (historyData.length > 0) {
-                const firstDate = new Date(historyData[0].timestamp);
-                const lastDate = new Date(historyData[historyData.length - 1].timestamp);
-                console.log(`Data range: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
-            }
-            
-            updateChart();
-            updateStats();
-        });
+        }
         
         // Update chart based on time range
         function updateChart() {
@@ -517,7 +524,14 @@
                 return;
             }
             
-            const labels = filteredData.map(d => {
+            // Limit data points untuk performa chart (max 200 points)
+            let displayData = filteredData;
+            if (filteredData.length > 200) {
+                const step = Math.ceil(filteredData.length / 200);
+                displayData = filteredData.filter((_, index) => index % step === 0);
+            }
+            
+            const labels = displayData.map(d => {
                 const date = new Date(d.timestamp);
                 return date.toLocaleTimeString('id-ID', { 
                     hour: '2-digit', 
@@ -525,17 +539,17 @@
                 });
             });
             
-            const values = filteredData.map(d => Math.round(d.value));
+            const values = displayData.map(d => Math.round(d.value));
             
             chart.data.labels = labels;
             chart.data.datasets[0].data = values;
             chart.update();
             
-            const firstDate = new Date(filteredData[0].timestamp);
-            const lastDate = new Date(filteredData[filteredData.length - 1].timestamp);
+            const firstDate = new Date(displayData[0].timestamp);
+            const lastDate = new Date(displayData[displayData.length - 1].timestamp);
             
             document.getElementById('chartInfo').textContent = 
-                `Menampilkan ${filteredData.length} data point (${firstDate.toLocaleTimeString('id-ID')} - ${lastDate.toLocaleTimeString('id-ID')})`;
+                `Menampilkan ${displayData.length} data point dari ${filteredData.length} total (${firstDate.toLocaleTimeString('id-ID')} - ${lastDate.toLocaleTimeString('id-ID')})`;
         }
         
         // Update statistics
@@ -625,7 +639,21 @@
             }
         });
         
-        updateDebug(`Dashboard initialized | Device ID: ${deviceID}`);
+        // FIXED: Auto-refresh data setiap 2 menit untuk update terus-menerus
+        function startAutoRefresh() {
+            // Load pertama kali
+            loadHistoryData();
+            
+            // Refresh setiap 2 menit
+            dataRefreshInterval = setInterval(() => {
+                loadHistoryData();
+                updateDebug(`🔄 Auto-refresh: Loading fresh data...`);
+            }, 2 * 60 * 1000); // 2 menit
+        }
+        
+        // Start monitoring
+        startAutoRefresh();
+        updateDebug(`✅ Dashboard initialized | Device: ${deviceID} | Auto-refresh: ON (every 2 min)`);
     </script>
 </body>
 </html>
