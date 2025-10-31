@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Real-time (Fixed)</title>
+    <title>CO2 Monitor - Real-time</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,10 +17,7 @@
             padding: 20px;
         }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1400px; margin: 0 auto; }
         
         .nav-menu {
             background: rgba(255, 255, 255, 0.95);
@@ -39,10 +32,7 @@
             gap: 15px;
         }
         
-        .nav-links {
-            display: flex;
-            gap: 15px;
-        }
+        .nav-links { display: flex; gap: 15px; }
         
         .nav-btn {
             padding: 10px 20px;
@@ -57,32 +47,12 @@
             display: inline-block;
         }
         
-        .nav-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
+        .nav-btn:hover { background: #667eea; color: white; transform: translateY(-2px); }
+        .nav-btn.active { background: #667eea; color: white; }
         
-        .nav-btn.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
         
         .status-badge {
             display: inline-block;
@@ -92,15 +62,8 @@
             margin-top: 10px;
         }
         
-        .status-online {
-            background: #10b981;
-            color: white;
-        }
-        
-        .status-offline {
-            background: #ef4444;
-            color: white;
-        }
+        .status-online { background: #10b981; color: white; }
+        .status-offline { background: #ef4444; color: white; }
         
         .cards {
             display: grid;
@@ -124,16 +87,8 @@
             margin-bottom: 10px;
         }
         
-        .card-value {
-            font-size: 3em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .card-unit {
-            font-size: 1.2em;
-            color: #888;
-        }
+        .card-value { font-size: 3em; font-weight: bold; margin-bottom: 5px; }
+        .card-unit { font-size: 1.2em; color: #888; }
         
         .card-status {
             margin-top: 10px;
@@ -143,20 +98,9 @@
             font-weight: bold;
         }
         
-        .status-good {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .status-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
+        .status-good { background: #d1fae5; color: #065f46; }
+        .status-warning { background: #fef3c7; color: #92400e; }
+        .status-danger { background: #fee2e2; color: #991b1b; }
         
         .chart-card {
             background: white;
@@ -175,16 +119,8 @@
             gap: 10px;
         }
         
-        .chart-title {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        
-        .time-filter {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+        .chart-title { font-size: 1.5em; font-weight: bold; }
+        .time-filter { display: flex; gap: 10px; flex-wrap: wrap; }
         
         .time-btn {
             padding: 8px 16px;
@@ -197,21 +133,10 @@
             transition: all 0.3s;
         }
         
-        .time-btn:hover {
-            background: #667eea;
-            color: white;
-        }
+        .time-btn:hover { background: #667eea; color: white; }
+        .time-btn.active { background: #667eea; color: white; }
         
-        .time-btn.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 400px;
-            width: 100%;
-        }
+        .chart-container { position: relative; height: 400px; width: 100%; }
         
         .download-btn {
             padding: 12px 24px;
@@ -251,10 +176,6 @@
             backdrop-filter: blur(10px);
         }
 
-        .info-banner strong {
-            font-size: 1.1em;
-        }
-
         .debug-info {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 10px;
@@ -262,6 +183,8 @@
             margin-bottom: 20px;
             font-size: 0.85em;
             font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
         }
 
         .last-update {
@@ -286,13 +209,11 @@
         </div>
 
         <div class="info-banner">
-            <strong>✅ Fixed Version - Optimized for 24/7 Operation</strong><br>
-            Menggunakan query terbatas & auto-refresh untuk monitoring jangka panjang
+            <strong>Real-time Dashboard - 24/7 Monitoring</strong><br>
+            Data update otomatis setiap menit • Refresh halaman jika data tidak muncul
         </div>
 
-        <div class="debug-info" id="debugInfo">
-            Loading...
-        </div>
+        <div class="debug-info" id="debugInfo">Loading...</div>
         
         <div class="header">
             <h1>🌱 CO2 Monitoring Dashboard</h1>
@@ -347,7 +268,7 @@
             <div class="data-info" id="chartInfo">Loading data...</div>
         </div>
         
-        <button class="download-btn" onclick="downloadCSV()">📥 Download Today's Data (CSV)</button>
+        <button class="download-btn" onclick="downloadCSV()">📥 Download All Data (CSV)</button>
         
         <div class="last-update" id="lastUpdate">Waiting for data...</div>
     </div>
@@ -360,27 +281,33 @@
             projectId: "co2-iot-727a9",
             storageBucket: "co2-iot-727a9.firebasestorage.app",
             messagingSenderId: "442178296251",
-            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e",
-            measurementId: "G-TZ5NLDGX2G"
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e"
         };
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const deviceID = "ESP32_01";
         
-        let historyData = [];
+        let allHistoryData = [];
         let currentTimeRange = 6;
-        let dataRefreshInterval;
+        let chart;
         
         function updateDebug(message) {
             const debugEl = document.getElementById('debugInfo');
             const now = new Date().toLocaleTimeString('id-ID');
-            debugEl.innerHTML = `<strong>[${now}]</strong> ${message}`;
+            const newLine = `[${now}] ${message}\n`;
+            debugEl.textContent = newLine + debugEl.textContent;
+            
+            // Keep only last 5 lines
+            const lines = debugEl.textContent.split('\n');
+            if (lines.length > 5) {
+                debugEl.textContent = lines.slice(0, 5).join('\n');
+            }
         }
         
         // Initialize Chart
         const ctx = document.getElementById('co2Chart').getContext('2d');
-        const chart = new Chart(ctx, {
+        chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
@@ -389,42 +316,32 @@
                     data: [],
                     borderColor: '#667eea',
                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderWidth: 3,
+                    borderWidth: 2,
                     fill: true,
                     tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointRadius: 2,
+                    pointHoverRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
+                    legend: { display: true, position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
-                        title: {
-                            display: true,
-                            text: 'CO2 (ppm)'
-                        }
+                        title: { display: true, text: 'CO2 (ppm)' }
                     },
                     x: {
-                        title: {
-                            display: true,
-                            text: 'Time'
-                        },
-                        ticks: {
-                            maxTicksLimit: 12
-                        }
+                        title: { display: true, text: 'Time' },
+                        ticks: { maxTicksLimit: 12 }
                     }
                 }
             }
@@ -457,84 +374,64 @@
                 document.getElementById('currentCO2').textContent = ppm;
                 updateStatus(ppm);
                 
-                const timestamp = data.timestamp;
-                const date = new Date(timestamp);
-                const ageSeconds = Math.round((Date.now() - timestamp) / 1000);
-                
+                const date = new Date(data.timestamp);
                 document.getElementById('lastUpdate').textContent = 
-                    `Last update: ${date.toLocaleString('id-ID')} (${ageSeconds}s ago)`;
+                    `Last update: ${date.toLocaleString('id-ID')}`;
                 
-                updateDebug(`✅ Latest: ${ppm} ppm at ${date.toLocaleString('id-ID')} | Age: ${ageSeconds}s`);
+                updateDebug(`Latest: ${ppm} ppm @ ${date.toLocaleTimeString('id-ID')}`);
                 
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
-                
-                // PENTING: Trigger refresh history jika ada data baru
-                // Cek apakah data latest lebih baru dari data terakhir di historyData
-                if (historyData.length === 0 || timestamp > historyData[historyData.length - 1].timestamp) {
-                    console.log('🆕 New data detected, refreshing history...');
-                    loadHistoryData();
-                }
             }
+        }, (error) => {
+            updateDebug(`ERROR Latest: ${error.message}`);
         });
         
-        // FIXED: Load history data - Simple version without indexing
-        function loadHistoryData() {
-            const now = Date.now();
-            const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+        // PERBAIKAN UTAMA: Load ALL history data tanpa limit
+        database.ref(`sensors/${deviceID}/history`).on('value', (snapshot) => {
+            allHistoryData = [];
             
-            updateDebug(`🔍 Loading ALL history data and filtering client-side...`);
-            
-            // Load SEMUA data, filter di client (temporary solution)
-            database.ref(`sensors/${deviceID}/history`)
-                .limitToLast(500) // Ambil max 500 data terakhir
-                .once('value', (snapshot) => {
-                    historyData = [];
-                    
-                    snapshot.forEach((childSnapshot) => {
-                        const data = childSnapshot.val();
-                        // Filter hanya 24 jam terakhir
-                        if (data.timestamp >= twentyFourHoursAgo) {
-                            historyData.push({
-                                timestamp: data.timestamp,
-                                value: data.value
-                            });
-                        }
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                if (data && data.timestamp && data.value) {
+                    allHistoryData.push({
+                        timestamp: data.timestamp,
+                        value: data.value
                     });
-                    
-                    historyData.sort((a, b) => a.timestamp - b.timestamp);
-                    
-                    if (historyData.length > 0) {
-                        const firstDate = new Date(historyData[0].timestamp);
-                        const lastDate = new Date(historyData[historyData.length - 1].timestamp);
-                        const latestAge = Math.round((now - historyData[historyData.length - 1].timestamp) / 1000);
-                        
-                        updateDebug(`📊 ${historyData.length} points | Latest: ${lastDate.toLocaleTimeString('id-ID')} (${latestAge}s ago)`);
-                        console.log(`✅ Data loaded: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
-                        
-                        // Warning jika data terlalu lama
-                        if (latestAge > 120) {
-                            console.warn(`⚠️ Latest data is ${latestAge}s old! ESP32 might not be sending data.`);
-                        }
-                    } else {
-                        updateDebug(`⚠️ No data found in last 24 hours!`);
-                    }
-                    
-                    updateChart();
-                    updateStats();
-                })
-                .catch(error => {
-                    updateDebug(`❌ ERROR: ${error.message}`);
-                    console.error('Firebase error:', error);
-                });
-        }
+                }
+            });
+            
+            // Sort by timestamp
+            allHistoryData.sort((a, b) => a.timestamp - b.timestamp);
+            
+            updateDebug(`Total data loaded: ${allHistoryData.length} records`);
+            
+            if (allHistoryData.length > 0) {
+                const first = new Date(allHistoryData[0].timestamp);
+                const last = new Date(allHistoryData[allHistoryData.length - 1].timestamp);
+                console.log(`Data from ${first.toLocaleString('id-ID')} to ${last.toLocaleString('id-ID')}`);
+            }
+            
+            updateChart();
+            updateStats();
+        }, (error) => {
+            updateDebug(`ERROR History: ${error.message}`);
+        });
         
-        // Update chart based on time range
         function updateChart() {
+            if (allHistoryData.length === 0) {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+                document.getElementById('chartInfo').textContent = 'Belum ada data';
+                return;
+            }
+            
             const now = Date.now();
             const cutoffTime = now - (currentTimeRange * 60 * 60 * 1000);
             
-            const filteredData = historyData.filter(d => d.timestamp >= cutoffTime);
+            // Filter data berdasarkan time range
+            const filteredData = allHistoryData.filter(d => d.timestamp >= cutoffTime);
             
             if (filteredData.length === 0) {
                 chart.data.labels = [];
@@ -545,37 +442,42 @@
                 return;
             }
             
-            // Limit data points untuk performa chart (max 200 points)
+            // Sampling untuk performa jika data terlalu banyak
             let displayData = filteredData;
-            if (filteredData.length > 200) {
-                const step = Math.ceil(filteredData.length / 200);
+            const maxPoints = 100;
+            
+            if (filteredData.length > maxPoints) {
+                const step = Math.ceil(filteredData.length / maxPoints);
                 displayData = filteredData.filter((_, index) => index % step === 0);
+                displayData.push(filteredData[filteredData.length - 1]); // Always include last point
             }
             
             const labels = displayData.map(d => {
                 const date = new Date(d.timestamp);
-                return date.toLocaleTimeString('id-ID', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
+                if (currentTimeRange <= 6) {
+                    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                } else if (currentTimeRange <= 24) {
+                    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric', hour: '2-digit' });
+                }
             });
             
-            const values = displayData.map(d => Math.round(d.value));
+            const values = displayData.map(d => d.value);
             
             chart.data.labels = labels;
             chart.data.datasets[0].data = values;
             chart.update();
             
-            const firstDate = new Date(displayData[0].timestamp);
-            const lastDate = new Date(displayData[displayData.length - 1].timestamp);
+            const first = new Date(filteredData[0].timestamp);
+            const last = new Date(filteredData[filteredData.length - 1].timestamp);
             
             document.getElementById('chartInfo').textContent = 
-                `Menampilkan ${displayData.length} data point dari ${filteredData.length} total (${firstDate.toLocaleTimeString('id-ID')} - ${lastDate.toLocaleTimeString('id-ID')})`;
+                `Showing ${filteredData.length} data points (${first.toLocaleTimeString('id-ID')} - ${last.toLocaleTimeString('id-ID')})`;
         }
         
-        // Update statistics
         function updateStats() {
-            if (historyData.length === 0) {
+            if (allHistoryData.length === 0) {
                 document.getElementById('avgInfo').textContent = 'Menunggu data...';
                 document.getElementById('maxInfo').textContent = 'Menunggu data...';
                 document.getElementById('minInfo').textContent = 'Menunggu data...';
@@ -587,58 +489,47 @@
             const oneDayAgo = now - (24 * 60 * 60 * 1000);
             
             // Average (1 hour)
-            const lastHourData = historyData.filter(d => d.timestamp >= oneHourAgo);
+            const lastHourData = allHistoryData.filter(d => d.timestamp >= oneHourAgo);
             if (lastHourData.length > 0) {
                 const avg = lastHourData.reduce((sum, d) => sum + d.value, 0) / lastHourData.length;
                 document.getElementById('avgCO2').textContent = Math.round(avg);
-                document.getElementById('avgInfo').textContent = `${lastHourData.length} data point`;
+                document.getElementById('avgInfo').textContent = `${lastHourData.length} readings`;
             } else {
                 document.getElementById('avgCO2').textContent = '--';
-                document.getElementById('avgInfo').textContent = 'Belum ada data 1 jam terakhir';
+                document.getElementById('avgInfo').textContent = 'No data in last hour';
             }
             
             // Max/Min (24 hours)
-            const lastDayData = historyData.filter(d => d.timestamp >= oneDayAgo);
+            const lastDayData = allHistoryData.filter(d => d.timestamp >= oneDayAgo);
             if (lastDayData.length > 0) {
                 const values = lastDayData.map(d => d.value);
-                const maxVal = Math.max(...values);
-                const minVal = Math.min(...values);
-                
-                document.getElementById('maxCO2').textContent = Math.round(maxVal);
-                document.getElementById('minCO2').textContent = Math.round(minVal);
-                
-                document.getElementById('maxInfo').textContent = `${lastDayData.length} data point`;
-                document.getElementById('minInfo').textContent = `${lastDayData.length} data point`;
+                document.getElementById('maxCO2').textContent = Math.round(Math.max(...values));
+                document.getElementById('minCO2').textContent = Math.round(Math.min(...values));
+                document.getElementById('maxInfo').textContent = `${lastDayData.length} readings`;
+                document.getElementById('minInfo').textContent = `${lastDayData.length} readings`;
             } else {
                 document.getElementById('maxCO2').textContent = '--';
                 document.getElementById('minCO2').textContent = '--';
-                document.getElementById('maxInfo').textContent = 'Belum ada data 24 jam terakhir';
-                document.getElementById('minInfo').textContent = 'Belum ada data 24 jam terakhir';
+                document.getElementById('maxInfo').textContent = 'No data in last 24h';
+                document.getElementById('minInfo').textContent = 'No data in last 24h';
             }
         }
         
-        // Change time range
         function changeTimeRange(hours) {
             currentTimeRange = hours;
-            
-            document.querySelectorAll('.time-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            
             updateChart();
         }
         
-        // Download CSV
         function downloadCSV() {
-            if (historyData.length === 0) {
+            if (allHistoryData.length === 0) {
                 alert('Tidak ada data untuk didownload');
                 return;
             }
             
             let csv = 'Timestamp,DateTime,CO2 (ppm)\n';
-            
-            historyData.forEach(d => {
+            allHistoryData.forEach(d => {
                 const date = new Date(d.timestamp);
                 csv += `${d.timestamp},${date.toLocaleString('id-ID')},${d.value.toFixed(2)}\n`;
             });
@@ -652,29 +543,18 @@
             window.URL.revokeObjectURL(url);
         }
         
-        // Check connection
+        // Connection monitoring
         database.ref('.info/connected').on('value', (snapshot) => {
             if (snapshot.val() === false) {
                 document.getElementById('connectionStatus').textContent = 'Offline';
                 document.getElementById('connectionStatus').className = 'status-badge status-offline';
+                updateDebug('Firebase connection lost');
+            } else {
+                updateDebug('Firebase connected');
             }
         });
         
-        // FIXED: Auto-refresh data setiap 2 menit untuk update terus-menerus
-        function startAutoRefresh() {
-            // Load pertama kali
-            loadHistoryData();
-            
-            // Refresh setiap 1 menit (lebih sering untuk real-time yang lebih baik)
-            dataRefreshInterval = setInterval(() => {
-                console.log('⏰ Auto-refresh triggered');
-                loadHistoryData();
-            }, 1 * 60 * 1000); // 1 menit
-        }
-        
-        // Start monitoring
-        startAutoRefresh();
-        updateDebug(`✅ Dashboard initialized | Device: ${deviceID} | Auto-refresh: ON (every 1 min)`);
+        updateDebug(`Dashboard initialized | Device: ${deviceID}`);
     </script>
 </body>
 </html>
