@@ -459,45 +459,65 @@
                 
                 const timestamp = data.timestamp;
                 const date = new Date(timestamp);
+                const ageSeconds = Math.round((Date.now() - timestamp) / 1000);
                 
                 document.getElementById('lastUpdate').textContent = 
-                    `Last update: ${date.toLocaleString('id-ID')}`;
+                    `Last update: ${date.toLocaleString('id-ID')} (${ageSeconds}s ago)`;
                 
-                updateDebug(`✅ Device: ${deviceID} | Latest: ${ppm} ppm | Time: ${date.toLocaleString('id-ID')}`);
+                updateDebug(`✅ Latest: ${ppm} ppm at ${date.toLocaleString('id-ID')} | Age: ${ageSeconds}s`);
                 
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
+                
+                // PENTING: Trigger refresh history jika ada data baru
+                // Cek apakah data latest lebih baru dari data terakhir di historyData
+                if (historyData.length === 0 || timestamp > historyData[historyData.length - 1].timestamp) {
+                    console.log('🆕 New data detected, refreshing history...');
+                    loadHistoryData();
+                }
             }
         });
         
-        // FIXED: Load history data dengan query time-based yang lebih efisien
+        // FIXED: Load history data - Simple version without indexing
         function loadHistoryData() {
             const now = Date.now();
             const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
             
-            // Query hanya data 24 jam terakhir, ordered by timestamp
+            updateDebug(`🔍 Loading ALL history data and filtering client-side...`);
+            
+            // Load SEMUA data, filter di client (temporary solution)
             database.ref(`sensors/${deviceID}/history`)
-                .orderByChild('timestamp')
-                .startAt(twentyFourHoursAgo)
+                .limitToLast(500) // Ambil max 500 data terakhir
                 .once('value', (snapshot) => {
                     historyData = [];
                     
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        historyData.push({
-                            timestamp: data.timestamp,
-                            value: data.value
-                        });
+                        // Filter hanya 24 jam terakhir
+                        if (data.timestamp >= twentyFourHoursAgo) {
+                            historyData.push({
+                                timestamp: data.timestamp,
+                                value: data.value
+                            });
+                        }
                     });
                     
                     historyData.sort((a, b) => a.timestamp - b.timestamp);
                     
-                    updateDebug(`📊 Loaded ${historyData.length} data points (last 24h)`);
-                    
                     if (historyData.length > 0) {
                         const firstDate = new Date(historyData[0].timestamp);
                         const lastDate = new Date(historyData[historyData.length - 1].timestamp);
-                        console.log(`Data range: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
+                        const latestAge = Math.round((now - historyData[historyData.length - 1].timestamp) / 1000);
+                        
+                        updateDebug(`📊 ${historyData.length} points | Latest: ${lastDate.toLocaleTimeString('id-ID')} (${latestAge}s ago)`);
+                        console.log(`✅ Data loaded: ${firstDate.toLocaleString('id-ID')} to ${lastDate.toLocaleString('id-ID')}`);
+                        
+                        // Warning jika data terlalu lama
+                        if (latestAge > 120) {
+                            console.warn(`⚠️ Latest data is ${latestAge}s old! ESP32 might not be sending data.`);
+                        }
+                    } else {
+                        updateDebug(`⚠️ No data found in last 24 hours!`);
                     }
                     
                     updateChart();
@@ -505,6 +525,7 @@
                 })
                 .catch(error => {
                     updateDebug(`❌ ERROR: ${error.message}`);
+                    console.error('Firebase error:', error);
                 });
         }
         
@@ -644,16 +665,16 @@
             // Load pertama kali
             loadHistoryData();
             
-            // Refresh setiap 2 menit
+            // Refresh setiap 1 menit (lebih sering untuk real-time yang lebih baik)
             dataRefreshInterval = setInterval(() => {
+                console.log('⏰ Auto-refresh triggered');
                 loadHistoryData();
-                updateDebug(`🔄 Auto-refresh: Loading fresh data...`);
-            }, 2 * 60 * 1000); // 2 menit
+            }, 1 * 60 * 1000); // 1 menit
         }
         
         // Start monitoring
         startAutoRefresh();
-        updateDebug(`✅ Dashboard initialized | Device: ${deviceID} | Auto-refresh: ON (every 2 min)`);
+        updateDebug(`✅ Dashboard initialized | Device: ${deviceID} | Auto-refresh: ON (every 1 min)`);
     </script>
 </body>
 </html>
