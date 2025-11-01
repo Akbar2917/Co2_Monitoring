@@ -350,7 +350,10 @@
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        if (data && data.timestamp && data.value && data.timestamp >= cutoff) {
+                        // ===== PERBAIKAN: Filter data anomali =====
+                        if (data && data.timestamp && data.value && 
+                            data.timestamp >= cutoff &&
+                            data.value >= 200 && data.value <= 5000) { // Filter nilai realistis
                             historyData.push({
                                 timestamp: data.timestamp,
                                 value: data.value
