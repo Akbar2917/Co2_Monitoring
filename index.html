@@ -245,13 +245,15 @@
         function updateDebug(message) {
             const debugEl = document.getElementById('debugInfo');
             const now = new Date().toLocaleTimeString('id-ID');
-            const newLine = `[${now}] ${message}\n`;
-            debugEl.textContent = newLine + debugEl.textContent;
+            const newLine = `[${now}] ${message}`;
             
+            // Replace content instead of prepending
             const lines = debugEl.textContent.split('\n');
-            if (lines.length > 6) {
-                debugEl.textContent = lines.slice(0, 6).join('\n');
+            lines.unshift(newLine);
+            if (lines.length > 8) {
+                lines.length = 8;
             }
+            debugEl.textContent = lines.join('\n');
         }
         
         // Initialize Chart
@@ -323,41 +325,67 @@
                 document.getElementById('currentCO2').textContent = ppm;
                 updateStatus(ppm);
                 
-                updateDebug(`Latest: ${ppm}ppm @ ${date.toLocaleTimeString('id-ID')} (${age}s ago)`);
+                updateDebug(`📡 Latest: ${ppm}ppm (${age}s ago)`);
                 
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
                 
-                // Trigger refresh jika data > 2 menit dari last refresh
-                if (Date.now() - lastRefresh > 120000) {
+                // Trigger refresh history HANYA jika:
+                // 1. Belum ada data history ATAU
+                // 2. Sudah lebih dari 5 menit dari last refresh
+                if (historyData.length === 0 || (Date.now() - lastRefresh > 5 * 60 * 1000)) {
+                    console.log('Triggering history refresh...');
                     loadHistoryData();
                 }
             }
+        }, (error) => {
+            updateDebug(`❌ Latest error: ${error.message}`);
         });
         
         // Load history dengan limitToLast untuk efisiensi
+        let isLoadingHistory = false; // Prevent multiple simultaneous loads
+        
         function loadHistoryData() {
-            const now = Date.now();
-            updateDebug('🔄 Loading history data...');
+            if (isLoadingHistory) {
+                console.log('History load already in progress, skipping...');
+                return;
+            }
             
-            // Load 300 data terakhir (cukup untuk 24 jam dengan interval 1 menit)
+            isLoadingHistory = true;
+            const now = Date.now();
+            const cutoff = now - (24 * 60 * 60 * 1000);
+            
+            updateDebug('🔄 Loading history...');
+            
+            // Timeout protection - max 10 detik
+            const loadTimeout = setTimeout(() => {
+                isLoadingHistory = false;
+                updateDebug('⚠️ Load timeout - retrying...');
+            }, 10000);
+            
+            // Load 1500 data terakhir
             database.ref(`sensors/${deviceID}/history`)
                 .limitToLast(1500)
                 .once('value')
                 .then((snapshot) => {
+                    clearTimeout(loadTimeout);
                     historyData = [];
-                    const cutoff = now - (24 * 60 * 60 * 1000);
+                    let validCount = 0;
+                    let invalidCount = 0;
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        // ===== PERBAIKAN: Filter data anomali =====
+                        // Filter data valid & realistis
                         if (data && data.timestamp && data.value && 
                             data.timestamp >= cutoff &&
-                            data.value >= 200 && data.value <= 5000) { // Filter nilai realistis
+                            data.value >= 200 && data.value <= 5000) {
                             historyData.push({
                                 timestamp: data.timestamp,
                                 value: data.value
                             });
+                            validCount++;
+                        } else {
+                            invalidCount++;
                         }
                     });
                     
@@ -366,17 +394,21 @@
                     if (historyData.length > 0) {
                         const first = new Date(historyData[0].timestamp);
                         const last = new Date(historyData[historyData.length - 1].timestamp);
-                        updateDebug(`✅ Loaded ${historyData.length} points (${first.toLocaleTimeString()} - ${last.toLocaleTimeString()})`);
+                        updateDebug(`✅ ${validCount} valid, ${invalidCount} filtered | ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()}`);
                     } else {
-                        updateDebug('⚠️ No data in last 24h');
+                        updateDebug('⚠️ No valid data in last 24h');
                     }
                     
                     lastRefresh = now;
+                    isLoadingHistory = false;
                     updateChart();
                     updateStats();
                 })
                 .catch((error) => {
+                    clearTimeout(loadTimeout);
+                    isLoadingHistory = false;
                     updateDebug(`❌ Error: ${error.message}`);
+                    console.error('Load error:', error);
                 });
         }
         
@@ -467,13 +499,19 @@
             updateChart();
         }
         
-        // Auto-refresh setiap 2 menit
+        // Auto-refresh setiap 5 menit (bukan 2 menit)
         setInterval(() => {
-            loadHistoryData();
-        }, 2 * 60 * 1000);
+            if (!isLoadingHistory) {
+                console.log('Auto-refresh triggered');
+                loadHistoryData();
+            }
+        }, 5 * 60 * 1000);
         
         // Initial load
-        loadHistoryData();
+        setTimeout(() => {
+            loadHistoryData();
+        }, 2000); // Delay 2 detik untuk pastikan Firebase ready
+        
         updateDebug('✅ Dashboard initialized');
     </script>
 </body>
