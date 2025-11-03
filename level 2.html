@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Status - CO2 Monitor</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .nav-menu {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover { background: #667eea; color: white; }
+        .nav-btn.active { background: #667eea; color: white; }
+        
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        
+        /* Sensor Grid Layout */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .sensor-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f0f0f0;
+        }
+        
+        .sensor-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sensor-p1 { color: #3b82f6; }
+        .sensor-p2 { color: #10b981; }
+        
+        .sensor-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .status-online { background: #10b981; color: white; }
+        .status-offline { background: #ef4444; color: white; }
+        
+        .sensor-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .metric-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        
+        .metric-unit {
+            font-size: 0.9em;
+            color: #888;
+            margin-left: 5px;
+        }
+        
+        /* Comparison Card */
+        .comparison-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .comparison-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .comparison-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+            border-radius: 15px;
+        }
+        
+        .comparison-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .comparison-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .efficiency-positive { color: #10b981; }
+        .efficiency-negative { color: #ef4444; }
+        .efficiency-neutral { color: #f59e0b; }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 15px;
+        }
+        
+        .progress-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .progress-bar {
+            height: 25px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            height: 300px;
+        }
+        
+        /* Alert Box */
+        .alert-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-box.show { display: block; }
+        
+        .alert-title {
+            font-weight: bold;
+            color: #92400e;
+            margin-bottom: 5px;
+        }
+        
+        .alert-message {
+            color: #78350f;
+            font-size: 0.95em;
+        }
+        
+        /* Timestamp */
+        .last-update {
+            text-align: center;
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sensor-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-menu">
+            <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
+                🌱 CO2 Monitor System
+            </div>
+            <div>
+                <a href="index.html" class="nav-btn">📊 Real-time</a>
+                <a href="sensors.html" class="nav-btn active">🔬 Sensors</a>
+                <a href="history.html" class="nav-btn">📅 Historical</a>
+            </div>
+        </div>
+        
+        <div class="header">
+            <h1>🔬 Sensor Status Monitor</h1>
+            <p>Individual Sensor Performance & Comparison</p>
+        </div>
+        
+        <!-- Alert Box -->
+        <div class="alert-box" id="alertBox">
+            <div class="alert-title">⚠️ System Alert</div>
+            <div class="alert-message" id="alertMessage">Checking sensor status...</div>
+        </div>
+        
+        <!-- Sensor Grid -->
+        <div class="sensor-grid">
+            <!-- P1 Sensor Panel -->
+            <div class="sensor-panel">
+                <div class="sensor-header">
+                    <div class="sensor-title sensor-p1">
+                        📍 P1 - Input Sensor
+                    </div>
+                    <span class="sensor-status status-offline" id="p1Status">Offline</span>
+                </div>
+                
+                <div class="sensor-metrics">
+                    <div class="metric-card">
+                        <div class="metric-label">Current CO2</div>
+                        <div class="metric-value">
+                            <span id="p1Current">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Average (1h)</div>
+                        <div class="metric-value">
+                            <span id="p1Average">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Max (24h)</div>
+                        <div class="metric-value">
+                            <span id="p1Max">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Min (24h)</div>
+                        <div class="metric-value">
+                            <span id="p1Min">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="p1Chart"></canvas>
+                </div>
+                
+                <div class="last-update" id="p1LastUpdate">Last update: --</div>
+            </div>
+            
+            <!-- P2 Sensor Panel -->
+            <div class="sensor-panel">
+                <div class="sensor-header">
+                    <div class="sensor-title sensor-p2">
+                        📍 P2 - Output Sensor
+                    </div>
+                    <span class="sensor-status status-offline" id="p2Status">Offline</span>
+                </div>
+                
+                <div class="sensor-metrics">
+                    <div class="metric-card">
+                        <div class="metric-label">Current CO2</div>
+                        <div class="metric-value">
+                            <span id="p2Current">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Average (1h)</div>
+                        <div class="metric-value">
+                            <span id="p2Average">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Max (24h)</div>
+                        <div class="metric-value">
+                            <span id="p2Max">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Min (24h)</div>
+                        <div class="metric-value">
+                            <span id="p2Min">--</span>
+                            <span class="metric-unit">ppm</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="p2Chart"></canvas>
+                </div>
+                
+                <div class="last-update" id="p2LastUpdate">Last update: --</div>
+            </div>
+        </div>
+        
+        <!-- Comparison Card -->
+        <div class="comparison-card">
+            <div class="comparison-title">🔄 Filtering Performance Analysis</div>
+            
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <div class="comparison-label">CO2 Reduction</div>
+                    <div class="comparison-value" id="co2Reduction">
+                        <span id="reductionValue">--</span>
+                        <span class="metric-unit">ppm</span>
+                    </div>
+                </div>
+                
+                <div class="comparison-item">
+                    <div class="comparison-label">Filtering Efficiency</div>
+                    <div class="comparison-value" id="efficiency">
+                        <span id="efficiencyValue">--</span>
+                        <span class="metric-unit">%</span>
+                    </div>
+                </div>
+                
+                <div class="comparison-item">
+                    <div class="comparison-label">System Status</div>
+                    <div class="comparison-value" id="systemStatus" style="font-size: 1.5em;">
+                        --
+                    </div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">Overall Filtering Efficiency</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="efficiencyBar" style="width: 0%;">
+                        0%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
+            authDomain: "co2-iot-727a9.firebaseapp.com",
+            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "co2-iot-727a9",
+            storageBucket: "co2-iot-727a9.firebasestorage.app",
+            messagingSenderId: "442178296251",
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Device IDs untuk kedua sensor
+        const sensorP1 = "ESP32_P1";
+        const sensorP2 = "ESP32_P2";
+        
+        // Data storage
+        let p1Data = { current: null, history: [] };
+        let p2Data = { current: null, history: [] };
+        
+        // Charts
+        let p1Chart, p2Chart;
+        
+        // Initialize Charts
+        function initializeCharts() {
+            // P1 Chart
+            const ctx1 = document.getElementById('p1Chart').getContext('2d');
+            p1Chart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'P1 - Input CO2',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'CO2 (ppm)' }
+                        },
+                        x: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // P2 Chart
+            const ctx2 = document.getElementById('p2Chart').getContext('2d');
+            p2Chart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'P2 - Output CO2',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'CO2 (ppm)' }
+                        },
+                        x: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update sensor display
+        function updateSensorDisplay(sensor, data) {
+            const prefix = sensor === 'P1' ? 'p1' : 'p2';
+            
+            if (data.current) {
+                // Update current value
+                document.getElementById(`${prefix}Current`).textContent = Math.round(data.current.value);
+                
+                // Update status
+                const statusEl = document.getElementById(`${prefix}Status`);
+                const timeDiff = Date.now() - data.current.timestamp;
+                
+                if (timeDiff < 5 * 60 * 1000) { // Less than 5 minutes
+                    statusEl.textContent = 'Online';
+                    statusEl.className = 'sensor-status status-online';
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = 'sensor-status status-offline';
+                }
+                
+                // Update last update time
+                const date = new Date(data.current.timestamp);
+                document.getElementById(`${prefix}LastUpdate`).textContent = 
+                    `Last update: ${date.toLocaleString('id-ID')}`;
+            }
+            
+            // Calculate statistics
+            if (data.history.length > 0) {
+                const now = Date.now();
+                const oneHour = now - (60 * 60 * 1000);
+                const oneDay = now - (24 * 60 * 60 * 1000);
+                
+                // 1 hour average
+                const hourData = data.history.filter(d => d.timestamp >= oneHour);
+                if (hourData.length > 0) {
+                    const avg = hourData.reduce((s, d) => s + d.value, 0) / hourData.length;
+                    document.getElementById(`${prefix}Average`).textContent = Math.round(avg);
+                }
+                
+                // 24 hour max/min
+                const dayData = data.history.filter(d => d.timestamp >= oneDay);
+                if (dayData.length > 0) {
+                    const values = dayData.map(d => d.value);
+                    document.getElementById(`${prefix}Max`).textContent = Math.round(Math.max(...values));
+                    document.getElementById(`${prefix}Min`).textContent = Math.round(Math.min(...values));
+                }
+                
+                // Update chart
+                updateChart(sensor, data);
+            }
+        }
+        
+        // Update chart
+        function updateChart(sensor, data) {
+            const chart = sensor === 'P1' ? p1Chart : p2Chart;
+            const recentData = data.history.slice(-50); // Last 50 points
+            
+            if (recentData.length > 0) {
+                const labels = recentData.map(d => {
+                    const date = new Date(d.timestamp);
+                    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                });
+                
+                const values = recentData.map(d => Math.round(d.value));
+                
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = values;
+                chart.update();
+            }
+        }
+        
+        // Update comparison
+        function updateComparison() {
+            if (p1Data.current && p2Data.current) {
+                const p1Value = p1Data.current.value;
+                const p2Value = p2Data.current.value;
+                
+                // Calculate reduction
+                const reduction = p1Value - p2Value;
+                const reductionEl = document.getElementById('reductionValue');
+                reductionEl.textContent = Math.round(reduction);
+                
+                // Calculate efficiency percentage
+                const efficiency = (reduction / p1Value) * 100;
+                const efficiencyEl = document.getElementById('efficiencyValue');
+                efficiencyEl.textContent = efficiency.toFixed(1);
+                
+                // Update efficiency bar
+                const effBar = document.getElementById('efficiencyBar');
+                const effPercent = Math.min(Math.max(efficiency, 0), 100);
+                effBar.style.width = `${effPercent}%`;
+                effBar.textContent = `${effPercent.toFixed(1)}%`;
+                
+                // Update system status
+                const statusEl = document.getElementById('systemStatus');
+                if (efficiency > 30) {
+                    statusEl.textContent = '✅ Excellent';
+                    statusEl.className = 'comparison-value efficiency-positive';
+                } else if (efficiency > 15) {
+                    statusEl.textContent = '⚠️ Good';
+                    statusEl.className = 'comparison-value efficiency-neutral';
+                } else {
+                    statusEl.textContent = '❌ Poor';
+                    statusEl.className = 'comparison-value efficiency-negative';
+                }
+                
+                // Check for alerts
+                checkAlerts(p1Value, p2Value, efficiency);
+            }
+        }
+        
+        // Check for system alerts
+        function checkAlerts(p1Value, p2Value, efficiency) {
+            const alertBox = document.getElementById('alertBox');
+            const alertMsg = document.getElementById('alertMessage');
+            
+            if (efficiency < 10) {
+                alertBox.className = 'alert-box show';
+                alertMsg.textContent = 'Low filtering efficiency detected! Check filter condition.';
+            } else if (p1Value > 2000 || p2Value > 1800) {
+                alertBox.className = 'alert-box show';
+                alertMsg.textContent = 'High CO2 levels detected! Ventilation required.';
+            } else if (Math.abs(Date.now() - p1Data.current.timestamp) > 10 * 60 * 1000 ||
+                       Math.abs(Date.now() - p2Data.current.timestamp) > 10 * 60 * 1000) {
+                alertBox.className = 'alert-box show';
+                alertMsg.textContent = 'Sensor connection issue detected!';
+            } else {
+                alertBox.className = 'alert-box';
+            }
+        }
+        
+        // Listen to P1 sensor data
+        database.ref(`sensors/${sensorP1}/latest`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                p1Data.current = data;
+                updateSensorDisplay('P1', p1Data);
+                updateComparison();
+            }
+        });
+        
+        // Listen to P2 sensor data
+        database.ref(`sensors/${sensorP2}/latest`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                p2Data.current = data;
+                updateSensorDisplay('P2', p2Data);
+                updateComparison();
+            }
+        });
+        
+        // Load history data for both sensors
+        function loadHistoryData() {
+            const now = Date.now();
+            const cutoff = now - (24 * 60 * 60 * 1000); // 24 hours
+            
+            // Load P1 history
+            database.ref(`sensors/${sensorP1}/history`)
+                .orderByChild('timestamp')
+                .startAt(cutoff)
+                .limitToLast(500)
+                .once('value')
+                .then((snapshot) => {
+                    p1Data.history = [];
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        if (data && data.timestamp && data.value) {
+                            p1Data.history.push(data);
+                        }
+                    });
+                    p1Data.history.sort((a, b) => a.timestamp - b.timestamp);
+                    updateSensorDisplay('P1', p1Data);
+                });
+            
+            // Load P2 history
+            database.ref(`sensors/${sensorP2}/history`)
+                .orderByChild('timestamp')
+                .startAt(cutoff)
+                .limitToLast(500)
+                .once('value')
+                .then((snapshot) => {
+                    p2Data.history = [];
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        if (data && data.timestamp && data.value) {
+                            p2Data.history.push(data);
+                        }
+                    });
+                    p2Data.history.sort((a, b) => a.timestamp - b.timestamp);
+                    updateSensorDisplay('P2', p2Data);
+                });
+        }
+        
+        // Initialize everything
+        window.onload = function() {
+            initializeCharts();
+            loadHistoryData();
+            
+            // Refresh history every 5 minutes
+            setInterval(loadHistoryData, 5 * 60 * 1000);
+        };
+    </script>
+</body>
+</html>
