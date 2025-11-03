@@ -245,7 +245,7 @@
         function updateDebug(message) {
             const debugEl = document.getElementById('debugInfo');
             const now = new Date().toLocaleTimeString('id-ID');
-            const newLine = [${now}] ${message};
+            const newLine = `[${now}] ${message}`;
             
             // Replace content instead of prepending
             const lines = debugEl.textContent.split('\n');
@@ -314,7 +314,7 @@
         }
         
         // Listen to latest data ONLY
-        database.ref(sensors/${deviceID}/latest).on('value', (snapshot) => {
+        database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const ppm = Math.round(data.value);
@@ -325,7 +325,7 @@
                 document.getElementById('currentCO2').textContent = ppm;
                 updateStatus(ppm);
                 
-                updateDebug(📡 Latest: ${ppm}ppm (${age}s ago));
+                updateDebug(`📡 Latest: ${ppm}ppm (${age}s ago)`);
                 
                 document.getElementById('connectionStatus').textContent = 'Online';
                 document.getElementById('connectionStatus').className = 'status-badge status-online';
@@ -339,7 +339,7 @@
                 }
             }
         }, (error) => {
-            updateDebug(❌ Latest error: ${error.message});
+            updateDebug(`❌ Latest error: ${error.message}`);
         });
         
         // Load history dengan limitToLast untuk efisiensi
@@ -360,11 +360,11 @@
             // Timeout protection - max 10 detik
             const loadTimeout = setTimeout(() => {
                 isLoadingHistory = false;
-                updateDebug('⚠ Load timeout - retrying...');
+                updateDebug('⚠️ Load timeout - retrying...');
             }, 10000);
             
             // Load 1500 data terakhir
-            database.ref(sensors/${deviceID}/history)
+            database.ref(`sensors/${deviceID}/history`)
                 .limitToLast(1500)
                 .once('value')
                 .then((snapshot) => {
@@ -394,9 +394,9 @@
                     if (historyData.length > 0) {
                         const first = new Date(historyData[0].timestamp);
                         const last = new Date(historyData[historyData.length - 1].timestamp);
-                        updateDebug(✅ ${validCount} valid, ${invalidCount} filtered | ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()});
+                        updateDebug(`✅ ${validCount} valid, ${invalidCount} filtered | ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()}`);
                     } else {
-                        updateDebug('⚠ No valid data in last 24h');
+                        updateDebug('⚠️ No valid data in last 24h');
                     }
                     
                     lastRefresh = now;
@@ -407,7 +407,7 @@
                 .catch((error) => {
                     clearTimeout(loadTimeout);
                     isLoadingHistory = false;
-                    updateDebug(❌ Error: ${error.message});
+                    updateDebug(`❌ Error: ${error.message}`);
                     console.error('Load error:', error);
                 });
         }
@@ -430,7 +430,7 @@
                 chart.data.labels = [];
                 chart.data.datasets[0].data = [];
                 chart.update();
-                document.getElementById('chartInfo').textContent = No data for ${currentTimeRange}h;
+                document.getElementById('chartInfo').textContent = `No data for ${currentTimeRange}h`;
                 return;
             }
             
@@ -455,7 +455,7 @@
             const first = new Date(filtered[0].timestamp);
             const last = new Date(filtered[filtered.length - 1].timestamp);
             document.getElementById('chartInfo').textContent = 
-                ${filtered.length} points: ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()};
+                `${filtered.length} points: ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()}`;
         }
         
         function updateStats() {
@@ -470,7 +470,7 @@
             if (hourData.length > 0) {
                 const avg = hourData.reduce((s, d) => s + d.value, 0) / hourData.length;
                 document.getElementById('avgCO2').textContent = Math.round(avg);
-                document.getElementById('avgInfo').textContent = ${hourData.length} readings;
+                document.getElementById('avgInfo').textContent = `${hourData.length} readings`;
             } else {
                 document.getElementById('avgCO2').textContent = '--';
                 document.getElementById('avgInfo').textContent = 'No data';
@@ -482,8 +482,8 @@
                 const values = dayData.map(d => d.value);
                 document.getElementById('maxCO2').textContent = Math.round(Math.max(...values));
                 document.getElementById('minCO2').textContent = Math.round(Math.min(...values));
-                document.getElementById('maxInfo').textContent = ${dayData.length} readings;
-                document.getElementById('minInfo').textContent = ${dayData.length} readings;
+                document.getElementById('maxInfo').textContent = `${dayData.length} readings`;
+                document.getElementById('minInfo').textContent = `${dayData.length} readings`;
             } else {
                 document.getElementById('maxCO2').textContent = '--';
                 document.getElementById('minCO2').textContent = '--';
