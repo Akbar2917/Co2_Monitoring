@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Historical Data</title>
+    <title>Historical Data - CO2 Monitor</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,10 +18,7 @@
             padding: 20px;
         }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1400px; margin: 0 auto; }
         
         .nav-menu {
             background: rgba(255, 255, 255, 0.95);
@@ -39,11 +33,6 @@
             gap: 15px;
         }
         
-        .nav-links {
-            display: flex;
-            gap: 15px;
-        }
-        
         .nav-btn {
             padding: 10px 20px;
             border: 2px solid #667eea;
@@ -54,172 +43,133 @@
             font-weight: bold;
             text-decoration: none;
             transition: all 0.3s;
-            display: inline-block;
         }
         
-        .nav-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
+        .nav-btn:hover { background: #667eea; color: white; }
+        .nav-btn.active { background: #667eea; color: white; }
         
-        .nav-btn.active {
-            background: #667eea;
-            color: white;
-        }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
         
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .info-banner {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: white;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .info-banner strong {
-            font-size: 1.1em;
-        }
-
-        .debug-info {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 0.85em;
-            font-family: monospace;
-        }
-        
-        .date-selector-card {
+        /* Control Panel */
+        .control-panel {
             background: white;
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
-        .date-selector-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #667eea;
-        }
-        
-        .date-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .date-input-group {
+        .control-row {
             display: flex;
-            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
         }
         
-        .date-input-group label {
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .control-label {
+            display: block;
             font-weight: bold;
             margin-bottom: 8px;
-            color: #666;
+            color: #333;
         }
         
-        .date-input-group input {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
+        .control-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
             font-size: 1em;
-            transition: all 0.3s;
         }
         
-        .date-input-group input:focus {
+        .control-input:focus {
             outline: none;
             border-color: #667eea;
         }
         
-        .action-buttons {
+        .sensor-selector {
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
+            gap: 10px;
         }
         
-        .btn-primary {
-            padding: 12px 30px;
+        .sensor-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .sensor-checkbox:hover {
+            background: #f3f4f6;
+        }
+        
+        .sensor-checkbox.active {
             background: #667eea;
             color: white;
-            border: none;
-            border-radius: 8px;
+            border-color: #667eea;
+        }
+        
+        .sensor-checkbox input {
             cursor: pointer;
-            font-weight: bold;
-            font-size: 1em;
-            transition: all 0.3s;
         }
         
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-secondary {
-            padding: 12px 30px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1em;
-            transition: all 0.3s;
-        }
-        
-        .btn-secondary:hover {
-            background: #f0f0f0;
-        }
-        
-        .quick-dates {
+        .btn-group {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 15px;
         }
         
-        .quick-date-btn {
-            padding: 8px 16px;
-            background: #f0f0f0;
-            color: #667eea;
+        .btn {
+            padding: 12px 24px;
             border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 0.9em;
+            cursor: pointer;
             transition: all 0.3s;
+            font-size: 1em;
         }
         
-        .quick-date-btn:hover {
+        .btn-primary {
             background: #667eea;
             color: white;
         }
         
-        .stats-cards {
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        /* Statistics Cards */
+        .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -228,110 +178,137 @@
             background: white;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
         .stat-title {
-            font-size: 0.85em;
+            font-size: 0.9em;
             color: #666;
+            margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 10px;
         }
         
         .stat-value {
-            font-size: 2.5em;
+            font-size: 2em;
             font-weight: bold;
-            color: #667eea;
+            margin-bottom: 5px;
         }
         
-        .stat-unit {
-            font-size: 1em;
+        .stat-info {
+            font-size: 0.85em;
             color: #888;
         }
         
-        .chart-card {
+        /* Chart Container */
+        .chart-container {
             background: white;
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         
         .chart-title {
             font-size: 1.5em;
             font-weight: bold;
-            margin-bottom: 20px;
         }
         
-        .chart-container {
-            position: relative;
-            height: 400px;
-            width: 100%;
+        .chart-options {
+            display: flex;
+            gap: 10px;
         }
         
-        .data-info {
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
-            margin-top: 15px;
-            font-style: italic;
-        }
-        
-        .download-btn {
-            padding: 12px 24px;
-            background: #10b981;
-            color: white;
-            border: none;
+        .chart-option {
+            padding: 8px 15px;
+            border: 2px solid #e5e7eb;
+            background: white;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 1em;
             transition: all 0.3s;
-            display: block;
-            margin: 20px auto;
         }
         
-        .download-btn:hover {
-            background: #059669;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        .chart-option:hover {
+            background: #f3f4f6;
         }
-
-        .available-dates {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .available-dates-title {
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .date-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .date-chip {
-            padding: 6px 12px;
+        
+        .chart-option.active {
             background: #667eea;
             color: white;
-            border-radius: 6px;
-            font-size: 0.85em;
-            cursor: pointer;
-            transition: all 0.3s;
+            border-color: #667eea;
         }
-
-        .date-chip:hover {
-            background: #5568d3;
-            transform: scale(1.05);
+        
+        #historyChart {
+            max-height: 500px;
+        }
+        
+        /* Data Table */
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .data-table tr:hover {
+            background: #f9fafb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-size: 1.2em;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -341,423 +318,480 @@
             <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
                 🌱 CO2 Monitor System
             </div>
-            <div class="nav-links">
+            <div>
                 <a href="index.html" class="nav-btn">📊 Real-time</a>
-                <a href="history.html" class="nav-btn active">📅 Historical Data</a>
+                <a href="sensors.html" class="nav-btn">🔬 Sensors</a>
+                <a href="history.html" class="nav-btn active">📅 Historical</a>
             </div>
-        </div>
-
-        <div class="info-banner">
-            <strong>Level 2: Historical Data Analysis</strong><br>
-            Pilih tanggal untuk melihat data CO2 dari history database • Bandingkan data antar periode
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            Loading...
         </div>
         
         <div class="header">
-            <h1>📅 Historical CO2 Data</h1>
-            <p>Analyze CO2 levels from any date</p>
+            <h1>📅 Historical Data Analysis</h1>
+            <p>Review and Export Historical CO2 Measurements</p>
         </div>
         
-        <div class="date-selector-card">
-            <div class="date-selector-title">📆 Select Date Range</div>
-            
-            <div class="date-controls">
-                <div class="date-input-group">
-                    <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" />
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="control-row">
+                <div class="control-group">
+                    <label class="control-label">From Date</label>
+                    <input type="datetime-local" id="dateFrom" class="control-input">
                 </div>
-                
-                <div class="date-input-group">
-                    <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" />
+                <div class="control-group">
+                    <label class="control-label">To Date</label>
+                    <input type="datetime-local" id="dateTo" class="control-input">
                 </div>
-            </div>
-            
-            <div class="action-buttons">
-                <button class="btn-primary" onclick="loadHistoricalData()">🔍 Load Data</button>
-                <button class="btn-secondary" onclick="resetDates()">🔄 Reset</button>
-            </div>
-            
-            <div style="margin-top: 15px;">
-                <strong>Quick Select:</strong>
-                <div class="quick-dates">
-                    <button class="quick-date-btn" onclick="setQuickDate('today')">Today</button>
-                    <button class="quick-date-btn" onclick="setQuickDate('yesterday')">Yesterday</button>
-                    <button class="quick-date-btn" onclick="setQuickDate('last7days')">Last 7 Days</button>
-                    <button class="quick-date-btn" onclick="setQuickDate('last30days')">Last 30 Days</button>
-                    <button class="quick-date-btn" onclick="setQuickDate('thismonth')">This Month</button>
+                <div class="control-group">
+                    <label class="control-label">Select Sensors</label>
+                    <div class="sensor-selector">
+                        <div class="sensor-checkbox active" onclick="toggleSensor('P1')">
+                            <input type="checkbox" id="sensorP1" checked>
+                            <label for="sensorP1">P1 Input</label>
+                        </div>
+                        <div class="sensor-checkbox active" onclick="toggleSensor('P2')">
+                            <input type="checkbox" id="sensorP2" checked>
+                            <label for="sensorP2">P2 Output</label>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="available-dates" id="availableDatesContainer" style="display: none;">
-                <div class="available-dates-title">📋 Available Dates in Database:</div>
-                <div class="data-info">Loading available dates...</div>
-                <div class="date-list" id="dateList"></div>
+            <div class="control-row">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="loadData()">🔍 Load Data</button>
+                    <button class="btn btn-secondary" onclick="exportData()">📥 Export CSV</button>
+                    <button class="btn btn-danger" onclick="clearData()">🗑️ Clear</button>
+                </div>
             </div>
         </div>
         
-        <div class="stats-cards" id="statsContainer" style="display: none;">
+        <!-- Statistics -->
+        <div class="stats-container" id="statsContainer" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-title">Total Data Points</div>
+                <div class="stat-value" id="totalPoints">0</div>
+                <div class="stat-info">Combined from all sensors</div>
+            </div>
             <div class="stat-card">
                 <div class="stat-title">Average CO2</div>
-                <div class="stat-value" id="avgValue">--</div>
-                <div class="stat-unit">ppm</div>
+                <div class="stat-value"><span id="avgCO2">--</span> ppm</div>
+                <div class="stat-info">Overall average</div>
             </div>
-            
             <div class="stat-card">
-                <div class="stat-title">Maximum CO2</div>
-                <div class="stat-value" id="maxValue">--</div>
-                <div class="stat-unit">ppm</div>
+                <div class="stat-title">Peak CO2</div>
+                <div class="stat-value"><span id="peakCO2">--</span> ppm</div>
+                <div class="stat-info" id="peakTime">--</div>
             </div>
-            
             <div class="stat-card">
                 <div class="stat-title">Minimum CO2</div>
-                <div class="stat-value" id="minValue">--</div>
-                <div class="stat-unit">ppm</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-title">Data Points</div>
-                <div class="stat-value" id="dataCount">--</div>
-                <div class="stat-unit">records</div>
+                <div class="stat-value"><span id="minCO2">--</span> ppm</div>
+                <div class="stat-info" id="minTime">--</div>
             </div>
         </div>
         
-        <div class="chart-card" id="chartContainer" style="display: none;">
-            <div class="chart-title">📈 CO2 Trend</div>
-            <div class="chart-container">
-                <canvas id="historicalChart"></canvas>
+        <!-- Chart -->
+        <div class="chart-container" id="chartContainer" style="display: none;">
+            <div class="chart-header">
+                <div class="chart-title">Historical CO2 Levels</div>
+                <div class="chart-options">
+                    <div class="chart-option active" onclick="setChartType('line')">Line</div>
+                    <div class="chart-option" onclick="setChartType('bar')">Bar</div>
+                </div>
             </div>
-            <div class="data-info" id="chartInfo"></div>
+            <canvas id="historyChart"></canvas>
         </div>
         
-        <button class="download-btn" id="downloadBtn" style="display: none;" onclick="downloadCSV()">
-            📥 Download Selected Data (CSV)
-        </button>
+        <!-- Data Table -->
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <h3 style="margin-bottom: 20px;">Raw Data Table</h3>
+            <div id="tableContent">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Sensor</th>
+                            <th>CO2 (ppm)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody">
+                        <!-- Data akan diisi di sini -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Loading/No Data Message -->
+        <div class="loading" id="loadingMessage">
+            <div class="spinner"></div>
+            <p style="margin-top: 20px;">Select date range and click "Load Data" to begin</p>
+        </div>
     </div>
 
     <script>
+        // Firebase Configuration
         const firebaseConfig = {
-    apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
-    authDomain: "co2-iot-727a9.firebaseapp.com",
-    databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "co2-iot-727a9",
-    storageBucket: "co2-iot-727a9.firebasestorage.app",
-    messagingSenderId: "442178296251",
-    appId: "1:442178296251:web:057809c7bd085d1aa4cc9e",
-    measurementId: "G-TZ5NLDGX2G"
-};
-const deviceID = "ESP32_01";
+            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
+            authDomain: "co2-iot-727a9.firebaseapp.com",
+            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "co2-iot-727a9",
+            storageBucket: "co2-iot-727a9.firebasestorage.app",
+            messagingSenderId: "442178296251",
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e"
+        };
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        let allHistoryData = [];
-        let filteredData = [];
-        let chart = null;
+        // Data storage
+        let historicalData = [];
+        let historyChart = null;
+        let currentChartType = 'line';
         
-        function updateDebug(message) {
-            const debugEl = document.getElementById('debugInfo');
-            const now = new Date().toLocaleTimeString('id-ID');
-            debugEl.innerHTML = `<strong>[${now}]</strong> ${message}`;
-        }
-        
+        // Initialize date inputs
         window.onload = function() {
-            const today = new Date();
-            const lastWeek = new Date(today);
-            lastWeek.setDate(lastWeek.getDate() - 7);
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24*60*60*1000);
             
-            document.getElementById('endDate').valueAsDate = today;
-            document.getElementById('startDate').valueAsDate = lastWeek;
+            document.getElementById('dateFrom').value = formatDateTimeLocal(yesterday);
+            document.getElementById('dateTo').value = formatDateTimeLocal(now);
             
-            loadAvailableDates();
-            updateDebug(`Page loaded | Device ID: ${deviceID}`);
+            initializeChart();
         };
         
-        function initChart() {
-            const ctx = document.getElementById('historicalChart').getContext('2d');
-            chart = new Chart(ctx, {
+        function formatDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        
+        // Initialize Chart
+        function initializeChart() {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            historyChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'CO2 Level (ppm)',
-                        data: [],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 3,
-                        pointHoverRadius: 6
-                    }]
+                    datasets: []
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     plugins: {
                         legend: {
                             display: true,
                             position: 'top'
                         },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y} ppm`;
+                                }
+                            }
                         }
                     },
                     scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                displayFormats: {
+                                    hour: 'HH:mm',
+                                    day: 'MMM dd'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
                         y: {
-                            beginAtZero: false,
                             title: {
                                 display: true,
                                 text: 'CO2 (ppm)'
                             }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            },
-                            ticks: {
-                                maxTicksLimit: 15
-                            }
                         }
                     }
                 }
             });
         }
         
-        function loadAvailableDates() {
-            database.ref(`sensors/${deviceID}/history`).once('value', (snapshot) => {
-                const dates = new Set();
-                let dataCount = 0;
-                
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    const date = new Date(data.timestamp);
-                    const dateStr = date.toLocaleDateString('id-ID');
-                    dates.add(dateStr);
-                    dataCount++;
-                });
-                
-                updateDebug(`Found ${dataCount} total records across ${dates.size} unique dates`);
-                
-                const dateArray = Array.from(dates).sort((a, b) => {
-                    return new Date(b.split('/').reverse().join('-')) - 
-                           new Date(a.split('/').reverse().join('-'));
-                });
-                
-                if (dateArray.length > 0) {
-                    const container = document.getElementById('availableDatesContainer');
-                    const dateList = document.getElementById('dateList');
-                    container.style.display = 'block';
-                    
-                    dateList.innerHTML = '';
-                    dateArray.forEach(dateStr => {
-                        const chip = document.createElement('div');
-                        chip.className = 'date-chip';
-                        chip.textContent = dateStr;
-                        chip.onclick = () => selectDateFromChip(dateStr);
-                        dateList.appendChild(chip);
-                    });
-                    
-                    document.querySelector('.available-dates .data-info').textContent = 
-                        `Found ${dateArray.length} days with data. Click any date to load.`;
-                }
-            }).catch(error => {
-                updateDebug(`ERROR loading available dates: ${error.message}`);
-            });
-        }
-        
-        function selectDateFromChip(dateStr) {
-            const parts = dateStr.split('/');
-            const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        // Toggle sensor selection
+        function toggleSensor(sensor) {
+            const checkbox = document.getElementById(`sensor${sensor}`);
+            checkbox.checked = !checkbox.checked;
             
-            document.getElementById('startDate').value = isoDate;
-            document.getElementById('endDate').value = isoDate;
-            
-            loadHistoricalData();
-        }
-        
-        function setQuickDate(option) {
-            const today = new Date();
-            const startDate = new Date();
-            
-            switch(option) {
-                case 'today':
-                    startDate.setDate(today.getDate());
-                    break;
-                case 'yesterday':
-                    startDate.setDate(today.getDate() - 1);
-                    today.setDate(today.getDate() - 1);
-                    break;
-                case 'last7days':
-                    startDate.setDate(today.getDate() - 7);
-                    break;
-                case 'last30days':
-                    startDate.setDate(today.getDate() - 30);
-                    break;
-                case 'thismonth':
-                    startDate.setDate(1);
-                    break;
+            const container = event.currentTarget;
+            if (checkbox.checked) {
+                container.classList.add('active');
+            } else {
+                container.classList.remove('active');
             }
-            
-            document.getElementById('startDate').valueAsDate = startDate;
-            document.getElementById('endDate').valueAsDate = today;
-            
-            loadHistoricalData();
         }
         
-        function resetDates() {
-            const today = new Date();
-            const lastWeek = new Date(today);
-            lastWeek.setDate(lastWeek.getDate() - 7);
+        // Load data from Firebase
+        function loadData() {
+            const dateFrom = new Date(document.getElementById('dateFrom').value).getTime();
+            const dateTo = new Date(document.getElementById('dateTo').value).getTime();
+            const loadP1 = document.getElementById('sensorP1').checked;
+            const loadP2 = document.getElementById('sensorP2').checked;
             
-            document.getElementById('endDate').valueAsDate = today;
-            document.getElementById('startDate').valueAsDate = lastWeek;
-            
-            document.getElementById('statsContainer').style.display = 'none';
-            document.getElementById('chartContainer').style.display = 'none';
-            document.getElementById('downloadBtn').style.display = 'none';
-        }
-        
-        function loadHistoricalData() {
-            const startDateInput = document.getElementById('startDate').value;
-            const endDateInput = document.getElementById('endDate').value;
-            
-            if (!startDateInput || !endDateInput) {
-                alert('Please select both start and end dates');
+            if (!loadP1 && !loadP2) {
+                alert('Please select at least one sensor');
                 return;
             }
             
-            const startDate = new Date(startDateInput);
-            startDate.setHours(0, 0, 0, 0);
+            // Show loading
+            document.getElementById('loadingMessage').innerHTML = 
+                '<div class="spinner"></div><p style="margin-top: 20px;">Loading data...</p>';
             
-            const endDate = new Date(endDateInput);
-            endDate.setHours(23, 59, 59, 999);
+            historicalData = [];
+            let promises = [];
             
-            const startTimestamp = startDate.getTime();
-            const endTimestamp = endDate.getTime();
-            
-            updateDebug(`Loading data from ${startDate.toLocaleDateString('id-ID')} to ${endDate.toLocaleDateString('id-ID')}`);
-            
-            document.getElementById('chartInfo').textContent = 'Loading data...';
-            document.getElementById('statsContainer').style.display = 'none';
-            document.getElementById('chartContainer').style.display = 'block';
-            
-            database.ref(`sensors/${deviceID}/history`).once('value', (snapshot) => {
-                filteredData = [];
-                
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    if (data.timestamp >= startTimestamp && data.timestamp <= endTimestamp) {
-                        filteredData.push({
-                            timestamp: data.timestamp,
-                            value: data.value
+            // Load P1 data if selected
+            if (loadP1) {
+                const p1Promise = database.ref('sensors/ESP32_P1/history')
+                    .orderByChild('timestamp')
+                    .startAt(dateFrom)
+                    .endAt(dateTo)
+                    .once('value')
+                    .then(snapshot => {
+                        snapshot.forEach(child => {
+                            const data = child.val();
+                            if (data && data.timestamp && data.value) {
+                                historicalData.push({
+                                    ...data,
+                                    sensor: 'P1'
+                                });
+                            }
                         });
-                    }
-                });
-                
-                filteredData.sort((a, b) => a.timestamp - b.timestamp);
-                
-                updateDebug(`Found ${filteredData.length} records for selected period`);
-                
-                if (filteredData.length === 0) {
-                    document.getElementById('chartInfo').textContent = 
-                        'No data found for selected date range';
-                    document.getElementById('statsContainer').style.display = 'none';
-                    document.getElementById('downloadBtn').style.display = 'none';
-                    return;
-                }
-                
-                updateChart();
-                updateStatistics();
-                
-                document.getElementById('downloadBtn').style.display = 'block';
-                document.getElementById('statsContainer').style.display = 'grid';
-            }).catch(error => {
-                updateDebug(`ERROR loading data: ${error.message}`);
-            });
-        }
-        
-        function updateChart() {
-            if (!chart) {
-                initChart();
+                    });
+                promises.push(p1Promise);
             }
             
-            const labels = filteredData.map(d => {
-                const date = new Date(d.timestamp);
-                if (filteredData.length <= 50) {
-                    return date.toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
+            // Load P2 data if selected
+            if (loadP2) {
+                const p2Promise = database.ref('sensors/ESP32_P2/history')
+                    .orderByChild('timestamp')
+                    .startAt(dateFrom)
+                    .endAt(dateTo)
+                    .once('value')
+                    .then(snapshot => {
+                        snapshot.forEach(child => {
+                            const data = child.val();
+                            if (data && data.timestamp && data.value) {
+                                historicalData.push({
+                                    ...data,
+                                    sensor: 'P2'
+                                });
+                            }
+                        });
                     });
+                promises.push(p2Promise);
+            }
+            
+            // Process all data when loaded
+            Promise.all(promises).then(() => {
+                if (historicalData.length === 0) {
+                    document.getElementById('loadingMessage').innerHTML = 
+                        '<p>No data found for selected date range</p>';
+                    hideContainers();
                 } else {
-                    return date.toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit'
-                    });
+                    // Sort by timestamp
+                    historicalData.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    // Display data
+                    displayStatistics();
+                    displayChart();
+                    displayTable();
+                    
+                    // Hide loading message
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    
+                    // Show containers
+                    document.getElementById('statsContainer').style.display = 'grid';
+                    document.getElementById('chartContainer').style.display = 'block';
+                    document.getElementById('tableContainer').style.display = 'block';
                 }
+            }).catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('loadingMessage').innerHTML = 
+                    '<p>Error loading data. Please try again.</p>';
+                hideContainers();
             });
-            
-            const values = filteredData.map(d => Math.round(d.value));
-            
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = values;
-            chart.update();
-            
-            const startDate = new Date(filteredData[0].timestamp).toLocaleDateString('id-ID');
-            const endDate = new Date(filteredData[filteredData.length - 1].timestamp).toLocaleDateString('id-ID');
-            
-            document.getElementById('chartInfo').textContent = 
-                `Showing ${filteredData.length} data points from ${startDate} to ${endDate}`;
         }
         
-        function updateStatistics() {
-            if (filteredData.length === 0) return;
-            
-            const values = filteredData.map(d => d.value);
-            const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+        // Display statistics
+        function displayStatistics() {
+            const values = historicalData.map(d => d.value);
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
             const max = Math.max(...values);
             const min = Math.min(...values);
             
-            document.getElementById('avgValue').textContent = Math.round(avg);
-            document.getElementById('maxValue').textContent = Math.round(max);
-            document.getElementById('minValue').textContent = Math.round(min);
-            document.getElementById('dataCount').textContent = filteredData.length;
+            const maxData = historicalData.find(d => d.value === max);
+            const minData = historicalData.find(d => d.value === min);
+            
+            document.getElementById('totalPoints').textContent = historicalData.length;
+            document.getElementById('avgCO2').textContent = Math.round(avg);
+            document.getElementById('peakCO2').textContent = Math.round(max);
+            document.getElementById('minCO2').textContent = Math.round(min);
+            
+            if (maxData) {
+                const maxDate = new Date(maxData.timestamp);
+                document.getElementById('peakTime').textContent = 
+                    `${maxData.sensor} - ${maxDate.toLocaleString('id-ID')}`;
+            }
+            
+            if (minData) {
+                const minDate = new Date(minData.timestamp);
+                document.getElementById('minTime').textContent = 
+                    `${minData.sensor} - ${minDate.toLocaleString('id-ID')}`;
+            }
         }
         
-        function downloadCSV() {
-            if (filteredData.length === 0) {
-                alert('No data to download');
+        // Display chart
+        function displayChart() {
+            // Group data by sensor
+            const p1Data = historicalData.filter(d => d.sensor === 'P1');
+            const p2Data = historicalData.filter(d => d.sensor === 'P2');
+            
+            const datasets = [];
+            
+            if (p1Data.length > 0) {
+                datasets.push({
+                    label: 'P1 - Input',
+                    data: p1Data.map(d => ({
+                        x: d.timestamp,
+                        y: Math.round(d.value)
+                    })),
+                    borderColor: '#3b82f6',
+                    backgroundColor: currentChartType === 'bar' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: currentChartType === 'line',
+                    tension: 0.4
+                });
+            }
+            
+            if (p2Data.length > 0) {
+                datasets.push({
+                    label: 'P2 - Output',
+                    data: p2Data.map(d => ({
+                        x: d.timestamp,
+                        y: Math.round(d.value)
+                    })),
+                    borderColor: '#10b981',
+                    backgroundColor: currentChartType === 'bar' ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    fill: currentChartType === 'line',
+                    tension: 0.4
+                });
+            }
+            
+            historyChart.data.datasets = datasets;
+            historyChart.update();
+        }
+        
+        // Display table
+        function displayTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            // Show last 100 entries
+            const displayData = historicalData.slice(-100).reverse();
+            
+            displayData.forEach(data => {
+                const row = document.createElement('tr');
+                const date = new Date(data.timestamp);
+                const value = Math.round(data.value);
+                
+                let status = 'Good';
+                let statusColor = '#10b981';
+                if (value >= 1200) {
+                    status = 'Poor';
+                    statusColor = '#ef4444';
+                } else if (value >= 800) {
+                    status = 'Warning';
+                    statusColor = '#f59e0b';
+                }
+                
+                row.innerHTML = `
+                    <td>${date.toLocaleString('id-ID')}</td>
+                    <td><strong style="color: ${data.sensor === 'P1' ? '#3b82f6' : '#10b981'}">${data.sensor}</strong></td>
+                    <td>${value}</td>
+                    <td><span style="color: ${statusColor}; font-weight: bold;">${status}</span></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Set chart type
+        function setChartType(type) {
+            currentChartType = type;
+            historyChart.config.type = type;
+            
+            document.querySelectorAll('.chart-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            displayChart();
+        }
+        
+        // Export data to CSV
+        function exportData() {
+            if (historicalData.length === 0) {
+                alert('No data to export. Please load data first.');
                 return;
             }
             
-            let csv = 'Timestamp,DateTime,CO2 (ppm)\n';
+            let csv = 'Timestamp,Date,Time,Sensor,CO2 (ppm),Status\n';
             
-            filteredData.forEach(d => {
-                const date = new Date(d.timestamp);
-                csv += `${d.timestamp},${date.toLocaleString('id-ID')},${d.value.toFixed(2)}\n`;
+            historicalData.forEach(data => {
+                const date = new Date(data.timestamp);
+                const dateStr = date.toLocaleDateString('id-ID');
+                const timeStr = date.toLocaleTimeString('id-ID');
+                const value = Math.round(data.value);
+                
+                let status = 'Good';
+                if (value >= 1200) status = 'Poor';
+                else if (value >= 800) status = 'Warning';
+                
+                csv += `${data.timestamp},"${dateStr}","${timeStr}",${data.sensor},${value},${status}\n`;
             });
             
+            // Create download link
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            
-            const startDate = new Date(filteredData[0].timestamp).toISOString().split('T')[0];
-            const endDate = new Date(filteredData[filteredData.length - 1].timestamp).toISOString().split('T')[0];
-            
             a.href = url;
-            a.download = `CO2_historical_${startDate}_to_${endDate}.csv`;
+            a.download = `co2_data_${Date.now()}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
+        }
+        
+        // Clear all data
+        function clearData() {
+            historicalData = [];
+            historyChart.data.datasets = [];
+            historyChart.update();
+            document.getElementById('dataTableBody').innerHTML = '';
+            hideContainers();
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('loadingMessage').innerHTML = 
+                '<div class="spinner"></div><p style="margin-top: 20px;">Select date range and click "Load Data" to begin</p>';
+        }
+        
+        // Hide containers
+        function hideContainers() {
+            document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('chartContainer').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
         }
     </script>
 </body>
 </html>
-
