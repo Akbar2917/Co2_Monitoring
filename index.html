@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Real-time 24/7</title>
+    <title>CO2 Monitor - Quad Sensor Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -17,7 +17,7 @@
             padding: 20px;
         }
         
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { max-width: 1800px; margin: 0 auto; }
         
         .nav-menu {
             background: rgba(255, 255, 255, 0.95);
@@ -32,6 +32,8 @@
             gap: 15px;
         }
         
+        .nav-links { display: flex; gap: 15px; flex-wrap: wrap; }
+        
         .nav-btn {
             padding: 10px 20px;
             border: 2px solid #667eea;
@@ -44,7 +46,7 @@
             transition: all 0.3s;
         }
         
-        .nav-btn:hover { background: #667eea; color: white; }
+        .nav-btn:hover { background: #667eea; color: white; transform: translateY(-2px); }
         .nav-btn.active { background: #667eea; color: white; }
         
         .header { text-align: center; color: white; margin-bottom: 30px; }
@@ -55,43 +57,60 @@
             padding: 8px 16px;
             border-radius: 20px;
             font-weight: bold;
-            margin-top: 10px;
+            margin: 5px;
+            font-size: 0.9em;
         }
         
         .status-online { background: #10b981; color: white; }
         .status-offline { background: #ef4444; color: white; }
         
+        .sensor-section {
+            margin-bottom: 30px;
+        }
+        
+        .sensor-title {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
         .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
         .card {
             background: white;
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         .card-title {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
-        .card-value { font-size: 3em; font-weight: bold; margin-bottom: 5px; }
-        .card-unit { font-size: 1.2em; color: #888; }
+        .card-value { font-size: 2.5em; font-weight: bold; margin-bottom: 5px; }
+        .card-unit { font-size: 1em; color: #888; }
         
         .card-status {
-            margin-top: 10px;
-            padding: 8px;
+            margin-top: 8px;
+            padding: 6px;
             border-radius: 8px;
             text-align: center;
             font-weight: bold;
+            font-size: 0.9em;
         }
         
         .status-good { background: #d1fae5; color: #065f46; }
@@ -101,7 +120,7 @@
         .chart-card {
             background: white;
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 20px;
         }
@@ -110,47 +129,37 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
             gap: 10px;
         }
         
-        .chart-title { font-size: 1.5em; font-weight: bold; }
+        .chart-title { font-size: 1.3em; font-weight: bold; }
         
-        .time-filter { display: flex; gap: 10px; flex-wrap: wrap; }
+        .time-filter { display: flex; gap: 8px; flex-wrap: wrap; }
         
         .time-btn {
-            padding: 8px 16px;
+            padding: 6px 14px;
             border: 2px solid #667eea;
             background: white;
             color: #667eea;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 0.85em;
             transition: all 0.3s;
         }
         
         .time-btn:hover { background: #667eea; color: white; }
         .time-btn.active { background: #667eea; color: white; }
         
-        .chart-container { position: relative; height: 400px; width: 100%; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
         
-        .debug-info {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 0.85em;
-            font-family: monospace;
-            max-height: 120px;
-            overflow-y: auto;
-        }
-
         .data-info {
             text-align: center;
             color: #888;
-            font-size: 0.9em;
-            margin-top: 10px;
+            font-size: 0.85em;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -158,67 +167,220 @@
     <div class="container">
         <div class="nav-menu">
             <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
-                🌱 CO2 Monitor System
+                🌱 CO2 Quad Sensor System
             </div>
-            <div>
-                <a href="index.html" class="nav-btn active">📊 Real-time</a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-btn active">📊 Dashboard</a>
+                <a href="status.html" class="nav-btn">🔧 Status Sensors</a>
                 <a href="history.html" class="nav-btn">📅 Historical</a>
             </div>
         </div>
-
-        <div class="debug-info" id="debugInfo">Initializing...</div>
         
         <div class="header">
-            <h1>🌱 CO2 Monitoring Dashboard</h1>
-            <p>24/7 Real-time Indoor Air Quality Monitor</p>
-            <span class="status-badge status-offline" id="connectionStatus">Connecting...</span>
-        </div>
-        
-        <div class="cards">
-            <div class="card">
-                <div class="card-title">Current CO2 Level</div>
-                <div class="card-value" id="currentCO2">--</div>
-                <div class="card-unit">ppm</div>
-                <div class="card-status status-good" id="statusText">Loading...</div>
-            </div>
-            
-            <div class="card">
-                <div class="card-title">Average (1 Hour)</div>
-                <div class="card-value" id="avgCO2">--</div>
-                <div class="card-unit">ppm</div>
-                <div class="data-info" id="avgInfo">Calculating...</div>
-            </div>
-            
-            <div class="card">
-                <div class="card-title">Maximum (24 Hours)</div>
-                <div class="card-value" id="maxCO2">--</div>
-                <div class="card-unit">ppm</div>
-                <div class="data-info" id="maxInfo">Calculating...</div>
-            </div>
-            
-            <div class="card">
-                <div class="card-title">Minimum (24 Hours)</div>
-                <div class="card-value" id="minCO2">--</div>
-                <div class="card-unit">ppm</div>
-                <div class="data-info" id="minInfo">Calculating...</div>
+            <h1>🌱 Quad CO2 Monitoring Dashboard</h1>
+            <p>Real-time 4 Sensor Monitoring System</p>
+            <div>
+                <span class="status-badge status-offline" id="statusP1">P1: Connecting...</span>
+                <span class="status-badge status-offline" id="statusP2">P2: Connecting...</span>
+                <span class="status-badge status-offline" id="statusBox">Box: Connecting...</span>
+                <span class="status-badge status-offline" id="statusInit">Init: Connecting...</span>
             </div>
         </div>
         
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title">CO2 Trend</div>
-                <div class="time-filter">
-                    <button class="time-btn" onclick="changeTimeRange(1)">1 Hour</button>
-                    <button class="time-btn" onclick="changeTimeRange(3)">3 Hours</button>
-                    <button class="time-btn active" onclick="changeTimeRange(6)">6 Hours</button>
-                    <button class="time-btn" onclick="changeTimeRange(12)">12 Hours</button>
-                    <button class="time-btn" onclick="changeTimeRange(24)">24 Hours</button>
+        <!-- P1 SENSOR SECTION -->
+        <div class="sensor-section">
+            <div class="sensor-title">🔵 P1 - Inlet Sensor (CO2 Entry Point)</div>
+            
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">Current CO2</div>
+                    <div class="card-value" id="currentP1">--</div>
+                    <div class="card-unit">ppm</div>
+                    <div class="card-status status-good" id="statusTextP1">Loading...</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Avg (1 Hour)</div>
+                    <div class="card-value" id="avgP1">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Max (24h)</div>
+                    <div class="card-value" id="maxP1">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Min (24h)</div>
+                    <div class="card-value" id="minP1">--</div>
+                    <div class="card-unit">ppm</div>
                 </div>
             </div>
-            <div class="chart-container">
-                <canvas id="co2Chart"></canvas>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">📈 P1 CO2 Trend</div>
+                    <div class="time-filter">
+                        <button class="time-btn" onclick="changeTimeRange('p1', 1)">1H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p1', 3)">3H</button>
+                        <button class="time-btn active" onclick="changeTimeRange('p1', 6)">6H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p1', 12)">12H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p1', 24)">24H</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartP1"></canvas>
+                </div>
+                <div class="data-info" id="chartInfoP1">Loading...</div>
             </div>
-            <div class="data-info" id="chartInfo">Loading...</div>
+        </div>
+        
+        <!-- P2 SENSOR SECTION -->
+        <div class="sensor-section">
+            <div class="sensor-title">🟢 P2 - Outlet Sensor (CO2 Exit Point)</div>
+            
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">Current CO2</div>
+                    <div class="card-value" id="currentP2">--</div>
+                    <div class="card-unit">ppm</div>
+                    <div class="card-status status-good" id="statusTextP2">Loading...</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Avg (1 Hour)</div>
+                    <div class="card-value" id="avgP2">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Max (24h)</div>
+                    <div class="card-value" id="maxP2">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Min (24h)</div>
+                    <div class="card-value" id="minP2">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">📈 P2 CO2 Trend</div>
+                    <div class="time-filter">
+                        <button class="time-btn" onclick="changeTimeRange('p2', 1)">1H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p2', 3)">3H</button>
+                        <button class="time-btn active" onclick="changeTimeRange('p2', 6)">6H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p2', 12)">12H</button>
+                        <button class="time-btn" onclick="changeTimeRange('p2', 24)">24H</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartP2"></canvas>
+                </div>
+                <div class="data-info" id="chartInfoP2">Loading...</div>
+            </div>
+        </div>
+
+        <!-- BOX SENSOR SECTION -->
+        <div class="sensor-section">
+            <div class="sensor-title">🟡 Box - Box Condition Sensor</div>
+            
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">Current CO2</div>
+                    <div class="card-value" id="currentBox">--</div>
+                    <div class="card-unit">ppm</div>
+                    <div class="card-status status-good" id="statusTextBox">Loading...</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Avg (1 Hour)</div>
+                    <div class="card-value" id="avgBox">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Max (24h)</div>
+                    <div class="card-value" id="maxBox">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Min (24h)</div>
+                    <div class="card-value" id="minBox">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">📈 Box CO2 Trend</div>
+                    <div class="time-filter">
+                        <button class="time-btn" onclick="changeTimeRange('box', 1)">1H</button>
+                        <button class="time-btn" onclick="changeTimeRange('box', 3)">3H</button>
+                        <button class="time-btn active" onclick="changeTimeRange('box', 6)">6H</button>
+                        <button class="time-btn" onclick="changeTimeRange('box', 12)">12H</button>
+                        <button class="time-btn" onclick="changeTimeRange('box', 24)">24H</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartBox"></canvas>
+                </div>
+                <div class="data-info" id="chartInfoBox">Loading...</div>
+            </div>
+        </div>
+
+        <!-- INITIAL CONDITION SENSOR SECTION -->
+        <div class="sensor-section">
+            <div class="sensor-title">🟠 Initial - Initial Condition Sensor</div>
+            
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">Current CO2</div>
+                    <div class="card-value" id="currentInit">--</div>
+                    <div class="card-unit">ppm</div>
+                    <div class="card-status status-good" id="statusTextInit">Loading...</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Avg (1 Hour)</div>
+                    <div class="card-value" id="avgInit">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Max (24h)</div>
+                    <div class="card-value" id="maxInit">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Min (24h)</div>
+                    <div class="card-value" id="minInit">--</div>
+                    <div class="card-unit">ppm</div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">📈 Initial CO2 Trend</div>
+                    <div class="time-filter">
+                        <button class="time-btn" onclick="changeTimeRange('init', 1)">1H</button>
+                        <button class="time-btn" onclick="changeTimeRange('init', 3)">3H</button>
+                        <button class="time-btn active" onclick="changeTimeRange('init', 6)">6H</button>
+                        <button class="time-btn" onclick="changeTimeRange('init', 12)">12H</button>
+                        <button class="time-btn" onclick="changeTimeRange('init', 24)">24H</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartInit"></canvas>
+                </div>
+                <div class="data-info" id="chartInfoInit">Loading...</div>
+            </div>
         </div>
     </div>
 
@@ -235,68 +397,80 @@
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const deviceID = "ESP32_01";
         
-        let historyData = [];
-        let currentTimeRange = 6;
-        let chart;
-        let lastRefresh = Date.now();
-        
-        function updateDebug(message) {
-            const debugEl = document.getElementById('debugInfo');
-            const now = new Date().toLocaleTimeString('id-ID');
-            const newLine = `[${now}] ${message}`;
-            
-            // Replace content instead of prepending
-            const lines = debugEl.textContent.split('\n');
-            lines.unshift(newLine);
-            if (lines.length > 8) {
-                lines.length = 8;
-            }
-            debugEl.textContent = lines.join('\n');
-        }
-        
-        // Initialize Chart
-        const ctx = document.getElementById('co2Chart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'CO2 Level (ppm)',
-                    data: [],
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 2,
-                    pointHoverRadius: 5
-                }]
+        const sensors = {
+            p1: {
+                deviceID: "ESP32_01",
+                historyData: [],
+                timeRange: 6,
+                chart: null,
+                color: "#667eea"
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: true },
-                    tooltip: { mode: 'index', intersect: false }
+            p2: {
+                deviceID: "ESP32_02",
+                historyData: [],
+                timeRange: 6,
+                chart: null,
+                color: "#10b981"
+            },
+            box: {
+                deviceID: "ESP32_03",
+                historyData: [],
+                timeRange: 6,
+                chart: null,
+                color: "#f59e0b"
+            },
+            init: {
+                deviceID: "ESP32_04",
+                historyData: [],
+                timeRange: 6,
+                chart: null,
+                color: "#ef4444"
+            }
+        };
+        
+        function initChart(canvasId, color) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CO2 Level (ppm)',
+                        data: [],
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        title: { display: true, text: 'CO2 (ppm)' }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { mode: 'index', intersect: false }
                     },
-                    x: {
-                        title: { display: true, text: 'Time' },
-                        ticks: { maxTicksLimit: 12 }
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'CO2 (ppm)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time' },
+                            ticks: { maxTicksLimit: 10 }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         
-        function updateStatus(ppm) {
-            const statusEl = document.getElementById('statusText');
-            const valueEl = document.getElementById('currentCO2');
+        function updateStatus(sensor, ppm) {
+            const statusEl = document.getElementById(`statusText${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`);
+            const valueEl = document.getElementById(`current${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`);
             
             if (ppm < 800) {
                 statusEl.textContent = 'Good - Fresh Air';
@@ -313,132 +487,80 @@
             }
         }
         
-        // Listen to latest data ONLY
-        database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const ppm = Math.round(data.value);
-                const ts = data.timestamp;
-                const date = new Date(ts);
-                const age = Math.round((Date.now() - ts) / 1000);
-                
-                document.getElementById('currentCO2').textContent = ppm;
-                updateStatus(ppm);
-                
-                updateDebug(`📡 Latest: ${ppm}ppm (${age}s ago)`);
-                
-                document.getElementById('connectionStatus').textContent = 'Online';
-                document.getElementById('connectionStatus').className = 'status-badge status-online';
-                
-                // Trigger refresh history HANYA jika:
-                // 1. Belum ada data history ATAU
-                // 2. Sudah lebih dari 5 menit dari last refresh
-                if (historyData.length === 0 || (Date.now() - lastRefresh > 5 * 60 * 1000)) {
-                    console.log('Triggering history refresh...');
-                    loadHistoryData();
-                }
-            }
-        }, (error) => {
-            updateDebug(`❌ Latest error: ${error.message}`);
-        });
-        
-        // Load history dengan limitToLast untuk efisiensi
-        let isLoadingHistory = false; // Prevent multiple simultaneous loads
-        
-        function loadHistoryData() {
-            if (isLoadingHistory) {
-                console.log('History load already in progress, skipping...');
-                return;
-            }
+        function setupSensor(sensor) {
+            const deviceID = sensors[sensor].deviceID;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
             
-            isLoadingHistory = true;
+            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const ppm = Math.round(data.value);
+                    const age = Math.round((Date.now() - data.timestamp) / 1000);
+                    
+                    document.getElementById(`current${sensorCap}`).textContent = ppm;
+                    updateStatus(sensor, ppm);
+                    
+                    const statusBadge = document.getElementById(`status${sensorCap}`);
+                    statusBadge.textContent = `${sensorCap}: Online`;
+                    statusBadge.className = 'status-badge status-online';
+                    
+                    if (sensors[sensor].historyData.length === 0) {
+                        loadHistoryData(sensor);
+                    }
+                }
+            });
+            
+            sensors[sensor].chart = initChart(`chart${sensorCap}`, sensors[sensor].color);
+        }
+        
+        function loadHistoryData(sensor) {
+            const deviceID = sensors[sensor].deviceID;
             const now = Date.now();
             const cutoff = now - (24 * 60 * 60 * 1000);
             
-            updateDebug('🔄 Loading history...');
-            
-            // Timeout protection - max 10 detik
-            const loadTimeout = setTimeout(() => {
-                isLoadingHistory = false;
-                updateDebug('⚠️ Load timeout - retrying...');
-            }, 10000);
-            
-            // Load 1500 data terakhir
             database.ref(`sensors/${deviceID}/history`)
                 .limitToLast(1500)
                 .once('value')
                 .then((snapshot) => {
-                    clearTimeout(loadTimeout);
-                    historyData = [];
-                    let validCount = 0;
-                    let invalidCount = 0;
+                    sensors[sensor].historyData = [];
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        // Filter data valid & realistis
-                        if (data && data.timestamp && data.value && 
-                            data.timestamp >= cutoff &&
-                            data.value >= 200 && data.value <= 5000) {
-                            historyData.push({
+                        if (data && data.timestamp >= cutoff && data.value >= 200 && data.value <= 5000) {
+                            sensors[sensor].historyData.push({
                                 timestamp: data.timestamp,
                                 value: data.value
                             });
-                            validCount++;
-                        } else {
-                            invalidCount++;
                         }
                     });
                     
-                    historyData.sort((a, b) => a.timestamp - b.timestamp);
+                    sensors[sensor].historyData.sort((a, b) => a.timestamp - b.timestamp);
                     
-                    if (historyData.length > 0) {
-                        const first = new Date(historyData[0].timestamp);
-                        const last = new Date(historyData[historyData.length - 1].timestamp);
-                        updateDebug(`✅ ${validCount} valid, ${invalidCount} filtered | ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()}`);
-                    } else {
-                        updateDebug('⚠️ No valid data in last 24h');
-                    }
-                    
-                    lastRefresh = now;
-                    isLoadingHistory = false;
-                    updateChart();
-                    updateStats();
-                })
-                .catch((error) => {
-                    clearTimeout(loadTimeout);
-                    isLoadingHistory = false;
-                    updateDebug(`❌ Error: ${error.message}`);
-                    console.error('Load error:', error);
+                    updateChart(sensor);
+                    updateStats(sensor);
                 });
         }
         
-        function updateChart() {
-            if (historyData.length === 0) {
+        function updateChart(sensor) {
+            const data = sensors[sensor].historyData;
+            const chart = sensors[sensor].chart;
+            const timeRange = sensors[sensor].timeRange;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            
+            if (data.length === 0) {
                 chart.data.labels = [];
                 chart.data.datasets[0].data = [];
                 chart.update();
-                document.getElementById('chartInfo').textContent = 'No data available';
+                document.getElementById(`chartInfo${sensorCap}`).textContent = 'No data';
                 return;
             }
             
-            const now = Date.now();
-            const cutoff = now - (currentTimeRange * 60 * 60 * 1000);
+            const cutoff = Date.now() - (timeRange * 60 * 60 * 1000);
+            let filtered = data.filter(d => d.timestamp >= cutoff);
             
-            let filtered = historyData.filter(d => d.timestamp >= cutoff);
-            
-            if (filtered.length === 0) {
-                chart.data.labels = [];
-                chart.data.datasets[0].data = [];
-                chart.update();
-                document.getElementById('chartInfo').textContent = `No data for ${currentTimeRange}h`;
-                return;
-            }
-            
-            // Sampling jika terlalu banyak
             if (filtered.length > 100) {
                 const step = Math.ceil(filtered.length / 100);
                 filtered = filtered.filter((_, i) => i % step === 0);
-                filtered.push(historyData[historyData.length - 1]);
             }
             
             const labels = filtered.map(d => {
@@ -452,67 +574,60 @@
             chart.data.datasets[0].data = values;
             chart.update();
             
-            const first = new Date(filtered[0].timestamp);
-            const last = new Date(filtered[filtered.length - 1].timestamp);
-            document.getElementById('chartInfo').textContent = 
-                `${filtered.length} points: ${first.toLocaleTimeString()} - ${last.toLocaleTimeString()}`;
+            document.getElementById(`chartInfo${sensorCap}`).textContent = 
+                `${filtered.length} points`;
         }
         
-        function updateStats() {
-            if (historyData.length === 0) return;
+        function updateStats(sensor) {
+            const data = sensors[sensor].historyData;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            
+            if (data.length === 0) return;
             
             const now = Date.now();
             const oneHour = now - (60 * 60 * 1000);
             const oneDay = now - (24 * 60 * 60 * 1000);
             
-            // 1 hour average
-            const hourData = historyData.filter(d => d.timestamp >= oneHour);
+            const hourData = data.filter(d => d.timestamp >= oneHour);
             if (hourData.length > 0) {
                 const avg = hourData.reduce((s, d) => s + d.value, 0) / hourData.length;
-                document.getElementById('avgCO2').textContent = Math.round(avg);
-                document.getElementById('avgInfo').textContent = `${hourData.length} readings`;
-            } else {
-                document.getElementById('avgCO2').textContent = '--';
-                document.getElementById('avgInfo').textContent = 'No data';
+                document.getElementById(`avg${sensorCap}`).textContent = Math.round(avg);
             }
             
-            // 24 hour max/min
-            const dayData = historyData.filter(d => d.timestamp >= oneDay);
+            const dayData = data.filter(d => d.timestamp >= oneDay);
             if (dayData.length > 0) {
                 const values = dayData.map(d => d.value);
-                document.getElementById('maxCO2').textContent = Math.round(Math.max(...values));
-                document.getElementById('minCO2').textContent = Math.round(Math.min(...values));
-                document.getElementById('maxInfo').textContent = `${dayData.length} readings`;
-                document.getElementById('minInfo').textContent = `${dayData.length} readings`;
-            } else {
-                document.getElementById('maxCO2').textContent = '--';
-                document.getElementById('minCO2').textContent = '--';
-                document.getElementById('maxInfo').textContent = 'No data';
-                document.getElementById('minInfo').textContent = 'No data';
+                document.getElementById(`max${sensorCap}`).textContent = Math.round(Math.max(...values));
+                document.getElementById(`min${sensorCap}`).textContent = Math.round(Math.min(...values));
             }
         }
         
-        function changeTimeRange(hours) {
-            currentTimeRange = hours;
-            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+        function changeTimeRange(sensor, hours) {
+            sensors[sensor].timeRange = hours;
+            
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            const container = document.getElementById(`chart${sensorCap}`).closest('.chart-card');
+            const buttons = container.querySelectorAll('.time-btn');
+            
+            buttons.forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            updateChart();
+            
+            updateChart(sensor);
         }
         
-        // Auto-refresh setiap 5 menit (bukan 2 menit)
+        // Initialize all sensors
+        setupSensor('p1');
+        setupSensor('p2');
+        setupSensor('box');
+        setupSensor('init');
+        
+        // Auto-refresh every 5 minutes
         setInterval(() => {
-            if (!isLoadingHistory) {
-                console.log('Auto-refresh triggered');
-                loadHistoryData();
-            }
+            loadHistoryData('p1');
+            loadHistoryData('p2');
+            loadHistoryData('box');
+            loadHistoryData('init');
         }, 5 * 60 * 1000);
-        
-        // Initial load
-        setTimeout(() => {
-            loadHistoryData();
-        }, 2000); // Delay 2 detik untuk pastikan Firebase ready
-        
-        updateDebug('✅ Dashboard initialized');
     </script>
 </body>
 </html>
