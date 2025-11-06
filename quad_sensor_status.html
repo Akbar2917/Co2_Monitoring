@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO2 Monitor - Quad Sensor Status</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container { max-width: 1800px; margin: 0 auto; }
+        
+        .nav-menu {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .nav-links { display: flex; gap: 15px; flex-wrap: wrap; }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover { background: #667eea; color: white; transform: translateY(-2px); }
+        .nav-btn.active { background: #667eea; color: white; }
+        
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        
+        .sensor-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        
+        .sensor-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #f0f0f0;
+        }
+        
+        .sensor-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .sensor-id {
+            font-size: 0.85em;
+            color: #888;
+            font-family: monospace;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        
+        .status-online { background: #10b981; color: white; }
+        .status-offline { background: #ef4444; color: white; }
+        .status-warning { background: #f59e0b; color: white; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .info-label {
+            font-size: 0.8em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .control-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .control-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #667eea;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+        
+        .btn-enable {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-enable:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .btn-disable {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-disable:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        
+        .log-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        
+        .log-title {
+            font-size: 0.95em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+        
+        .log-entry {
+            font-size: 0.8em;
+            font-family: monospace;
+            padding: 4px 0;
+            color: #666;
+        }
+        
+        .health-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .health-good { background: #10b981; }
+        .health-warning { background: #f59e0b; }
+        .health-bad { background: #ef4444; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats-mini {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-mini {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-mini-label {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        .stat-mini-value {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-menu">
+            <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
+                🌱 CO2 Quad Sensor System
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-btn">📊 Dashboard</a>
+                <a href="status.html" class="nav-btn active">🔧 Status Sensors</a>
+                <a href="history.html" class="nav-btn">📅 Historical</a>
+            </div>
+        </div>
+        
+        <div class="header">
+            <h1>🔧 Quad Sensor Status Monitor</h1>
+            <p>Real-time health & control for all 4 sensors</p>
+        </div>
+        
+        <div class="sensor-cards">
+            <!-- P1 Sensor Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div>
+                        <div class="sensor-name">🔵 P1 - Inlet</div>
+                        <div class="sensor-id" id="deviceIdP1">ESP32_01</div>
+                    </div>
+                    <span class="status-badge status-offline" id="statusP1">
+                        <span class="health-indicator health-bad"></span>
+                        Connecting...
+                    </span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Current Value</div>
+                        <div class="info-value" id="valueP1">-- ppm</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Last Update</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="lastUpdateP1">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Data Age</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="dataAgeP1">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Device Status</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="deviceStatusP1">--</div>
+                    </div>
+                </div>
+                
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">24h Readings</div>
+                        <div class="stat-mini-value" id="readingsP1">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Avg PPM</div>
+                        <div class="stat-mini-value" id="avgPpmP1">--</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="control-title">Remote Control</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-enable" onclick="controlSensor('p1', true)">
+                            ✅ Enable
+                        </button>
+                        <button class="btn btn-disable" onclick="controlSensor('p1', false)">
+                            ❌ Disable
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="log-section">
+                    <div class="log-title">Activity Log</div>
+                    <div id="logP1">
+                        <div class="log-entry">Waiting for data...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- P2 Sensor Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div>
+                        <div class="sensor-name">🟢 P2 - Outlet</div>
+                        <div class="sensor-id" id="deviceIdP2">ESP32_02</div>
+                    </div>
+                    <span class="status-badge status-offline" id="statusP2">
+                        <span class="health-indicator health-bad"></span>
+                        Connecting...
+                    </span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Current Value</div>
+                        <div class="info-value" id="valueP2">-- ppm</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Last Update</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="lastUpdateP2">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Data Age</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="dataAgeP2">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Device Status</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="deviceStatusP2">--</div>
+                    </div>
+                </div>
+                
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">24h Readings</div>
+                        <div class="stat-mini-value" id="readingsP2">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Avg PPM</div>
+                        <div class="stat-mini-value" id="avgPpmP2">--</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="control-title">Remote Control</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-enable" onclick="controlSensor('p2', true)">
+                            ✅ Enable
+                        </button>
+                        <button class="btn btn-disable" onclick="controlSensor('p2', false)">
+                            ❌ Disable
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="log-section">
+                    <div class="log-title">Activity Log</div>
+                    <div id="logP2">
+                        <div class="log-entry">Waiting for data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box Sensor Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div>
+                        <div class="sensor-name">🟡 Box - Box Condition</div>
+                        <div class="sensor-id" id="deviceIdBox">ESP32_03</div>
+                    </div>
+                    <span class="status-badge status-offline" id="statusBox">
+                        <span class="health-indicator health-bad"></span>
+                        Connecting...
+                    </span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Current Value</div>
+                        <div class="info-value" id="valueBox">-- ppm</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Last Update</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="lastUpdateBox">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Data Age</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="dataAgeBox">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Device Status</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="deviceStatusBox">--</div>
+                    </div>
+                </div>
+                
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">24h Readings</div>
+                        <div class="stat-mini-value" id="readingsBox">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Avg PPM</div>
+                        <div class="stat-mini-value" id="avgPpmBox">--</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="control-title">Remote Control</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-enable" onclick="controlSensor('box', true)">
+                            ✅ Enable
+                        </button>
+                        <button class="btn btn-disable" onclick="controlSensor('box', false)">
+                            ❌ Disable
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="log-section">
+                    <div class="log-title">Activity Log</div>
+                    <div id="logBox">
+                        <div class="log-entry">Waiting for data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Initial Condition Sensor Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div>
+                        <div class="sensor-name">🟠 Initial - Init Condition</div>
+                        <div class="sensor-id" id="deviceIdInit">ESP32_04</div>
+                    </div>
+                    <span class="status-badge status-offline" id="statusInit">
+                        <span class="health-indicator health-bad"></span>
+                        Connecting...
+                    </span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Current Value</div>
+                        <div class="info-value" id="valueInit">-- ppm</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Last Update</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="lastUpdateInit">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Data Age</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="dataAgeInit">--</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Device Status</div>
+                        <div class="info-value" style="font-size: 0.95em;" id="deviceStatusInit">--</div>
+                    </div>
+                </div>
+                
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">24h Readings</div>
+                        <div class="stat-mini-value" id="readingsInit">--</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Avg PPM</div>
+                        <div class="stat-mini-value" id="avgPpmInit">--</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="control-title">Remote Control</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-enable" onclick="controlSensor('init', true)">
+                            ✅ Enable
+                        </button>
+                        <button class="btn btn-disable" onclick="controlSensor('init', false)">
+                            ❌ Disable
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="log-section">
+                    <div class="log-title">Activity Log</div>
+                    <div id="logInit">
+                        <div class="log-entry">Waiting for data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
+            authDomain: "co2-iot-727a9.firebaseapp.com",
+            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "co2-iot-727a9",
+            storageBucket: "co2-iot-727a9.firebasestorage.app",
+            messagingSenderId: "442178296251",
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        const sensors = {
+            p1: { deviceID: "ESP32_01", logs: [] },
+            p2: { deviceID: "ESP32_02", logs: [] },
+            box: { deviceID: "ESP32_03", logs: [] },
+            init: { deviceID: "ESP32_04", logs: [] }
+        };
+        
+        function addLog(sensor, message) {
+            const now = new Date().toLocaleTimeString('id-ID');
+            const logEntry = `[${now}] ${message}`;
+            sensors[sensor].logs.unshift(logEntry);
+            
+            if (sensors[sensor].logs.length > 10) {
+                sensors[sensor].logs.length = 10;
+            }
+            
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            const logEl = document.getElementById(`log${sensorCap}`);
+            logEl.innerHTML = sensors[sensor].logs.map(log => 
+                `<div class="log-entry">${log}</div>`
+            ).join('');
+        }
+        
+        function setupSensor(sensor) {
+            const deviceID = sensors[sensor].deviceID;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            
+            // Listen to latest data
+            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const ppm = Math.round(data.value);
+                    const timestamp = data.timestamp;
+                    const age = Math.round((Date.now() - timestamp) / 1000);
+                    const date = new Date(timestamp);
+                    
+                    // Update values
+                    document.getElementById(`value${sensorCap}`).textContent = `${ppm} ppm`;
+                    document.getElementById(`lastUpdate${sensorCap}`).textContent = 
+                        date.toLocaleTimeString('id-ID');
+                    document.getElementById(`dataAge${sensorCap}`).textContent = 
+                        age < 60 ? `${age}s ago` : `${Math.floor(age/60)}m ago`;
+                    
+                    // Update status
+                    const statusEl = document.getElementById(`status${sensorCap}`);
+                    const healthIndicator = statusEl.querySelector('.health-indicator');
+                    
+                    if (age < 120) {
+                        statusEl.textContent = 'Online';
+                        statusEl.className = 'status-badge status-online';
+                        healthIndicator.className = 'health-indicator health-good';
+                        statusEl.prepend(healthIndicator);
+                    } else if (age < 300) {
+                        statusEl.textContent = 'Delayed';
+                        statusEl.className = 'status-badge status-warning';
+                        healthIndicator.className = 'health-indicator health-warning';
+                        statusEl.prepend(healthIndicator);
+                    } else {
+                        statusEl.textContent = 'Offline';
+                        statusEl.className = 'status-badge status-offline';
+                        healthIndicator.className = 'health-indicator health-bad';
+                        statusEl.prepend(healthIndicator);
+                    }
+                    
+                    addLog(sensor, `Data received: ${ppm} ppm`);
+                }
+            });
+            
+            // Listen to control status
+            database.ref(`control/${deviceID}/enabled`).on('value', (snapshot) => {
+                const enabled = snapshot.val();
+                document.getElementById(`deviceStatus${sensorCap}`).textContent = 
+                    enabled ? '✅ Enabled' : '❌ Disabled';
+                
+                if (enabled !== null) {
+                    addLog(sensor, `Device ${enabled ? 'enabled' : 'disabled'}`);
+                }
+            });
+            
+            // Load 24h stats
+            load24hStats(sensor);
+        }
+        
+        function load24hStats(sensor) {
+            const deviceID = sensors[sensor].deviceID;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            
+            database.ref(`sensors/${deviceID}/history`)
+                .limitToLast(1500)
+                .once('value')
+                .then((snapshot) => {
+                    let count = 0;
+                    let sum = 0;
+                    
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        if (data && data.timestamp >= cutoff) {
+                            count++;
+                            sum += data.value;
+                        }
+                    });
+                    
+                    document.getElementById(`readings${sensorCap}`).textContent = count;
+                    document.getElementById(`avgPpm${sensorCap}`).textContent = 
+                        count > 0 ? Math.round(sum / count) : '--';
+                    
+                    addLog(sensor, `24h stats loaded: ${count} readings`);
+                });
+        }
+        
+        function controlSensor(sensor, enable) {
+            const deviceID = sensors[sensor].deviceID;
+            const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            
+            database.ref(`control/${deviceID}/enabled`).set(enable)
+                .then(() => {
+                    addLog(sensor, `Control command sent: ${enable ? 'ENABLE' : 'DISABLE'}`);
+                    alert(`${sensorCap} sensor ${enable ? 'enabled' : 'disabled'} successfully!`);
+                })
+                .catch((error) => {
+                    addLog(sensor, `Control failed: ${error.message}`);
+                    alert(`Failed to control sensor: ${error.message}`);
+                });
+        }
+        
+        // Initialize all sensors
+        setupSensor('p1');
+        setupSensor('p2');
+        setupSensor('box');
+        setupSensor('init');
+        
+        // Refresh stats every 5 minutes
+        setInterval(() => {
+            load24hStats('p1');
+            load24hStats('p2');
+            load24hStats('box');
+            load24hStats('init');
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
