@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Historical Data</title>
+    <title>CO2 Monitor - Historical Data (4 Sensors)</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,10 +17,7 @@
             padding: 20px;
         }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1600px; margin: 0 auto; }
         
         .nav-menu {
             background: rgba(255, 255, 255, 0.95);
@@ -39,10 +32,7 @@
             gap: 15px;
         }
         
-        .nav-links {
-            display: flex;
-            gap: 15px;
-        }
+        .nav-links { display: flex; gap: 15px; flex-wrap: wrap; }
         
         .nav-btn {
             padding: 10px 20px;
@@ -54,57 +44,59 @@
             font-weight: bold;
             text-decoration: none;
             transition: all 0.3s;
-            display: inline-block;
         }
         
-        .nav-btn:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
+        .nav-btn:hover { background: #667eea; color: white; transform: translateY(-2px); }
+        .nav-btn.active { background: #667eea; color: white; }
         
-        .nav-btn.active {
-            background: #667eea;
-            color: white;
-        }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
         
-        .header {
-            text-align: center;
-            color: white;
+        .sensor-selector {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 30px;
         }
         
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+        .sensor-tabs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .info-banner {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
+        .sensor-tab {
             padding: 15px;
-            margin-bottom: 20px;
-            color: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
             text-align: center;
-            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            background: white;
         }
-
-        .info-banner strong {
+        
+        .sensor-tab:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .sensor-tab.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .sensor-tab-title {
             font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 5px;
         }
-
-        .debug-info {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
+        
+        .sensor-tab-subtitle {
             font-size: 0.85em;
-            font-family: monospace;
+            opacity: 0.8;
         }
         
         .date-selector-card {
@@ -189,9 +181,7 @@
             transition: all 0.3s;
         }
         
-        .btn-secondary:hover {
-            background: #f0f0f0;
-        }
+        .btn-secondary:hover { background: #f0f0f0; }
         
         .quick-dates {
             display: flex;
@@ -298,67 +288,45 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
         }
-
-        .available-dates {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .available-dates-title {
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .date-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .date-chip {
-            padding: 6px 12px;
-            background: #667eea;
-            color: white;
-            border-radius: 6px;
-            font-size: 0.85em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .date-chip:hover {
-            background: #5568d3;
-            transform: scale(1.05);
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="nav-menu">
             <div style="font-size: 1.2em; font-weight: bold; color: #667eea;">
-                🌱 CO2 Monitor System
+                🌱 CO2 Quad Sensor System
             </div>
             <div class="nav-links">
-                <a href="index.html" class="nav-btn">📊 Real-time</a>
-                <a href="history.html" class="nav-btn active">📅 Historical Data</a>
+                <a href="index.html" class="nav-btn">📊 Dashboard</a>
+                <a href="status.html" class="nav-btn">🔧 Status Sensors</a>
+                <a href="history.html" class="nav-btn active">📅 Historical</a>
             </div>
-        </div>
-
-        <div class="info-banner">
-            <strong>Level 2: Historical Data Analysis</strong><br>
-            Pilih tanggal untuk melihat data CO2 dari history database • Bandingkan data antar periode
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            Loading...
         </div>
         
         <div class="header">
             <h1>📅 Historical CO2 Data</h1>
-            <p>Analyze CO2 levels from any date</p>
+            <p>Analyze CO2 levels from any date (All 4 Sensors)</p>
+        </div>
+        
+        <div class="sensor-selector">
+            <div class="sensor-tabs">
+                <div class="sensor-tab active" onclick="selectSensor('p1')">
+                    <div class="sensor-tab-title">🔵 P1 Sensor</div>
+                    <div class="sensor-tab-subtitle">Inlet - Entry Point</div>
+                </div>
+                <div class="sensor-tab" onclick="selectSensor('p2')">
+                    <div class="sensor-tab-title">🟢 P2 Sensor</div>
+                    <div class="sensor-tab-subtitle">Outlet - Exit Point</div>
+                </div>
+                <div class="sensor-tab" onclick="selectSensor('box')">
+                    <div class="sensor-tab-title">🟡 Box Sensor</div>
+                    <div class="sensor-tab-subtitle">Box Condition</div>
+                </div>
+                <div class="sensor-tab" onclick="selectSensor('init')">
+                    <div class="sensor-tab-title">🟠 Initial Sensor</div>
+                    <div class="sensor-tab-subtitle">Initial Condition</div>
+                </div>
+            </div>
         </div>
         
         <div class="date-selector-card">
@@ -391,12 +359,6 @@
                     <button class="quick-date-btn" onclick="setQuickDate('thismonth')">This Month</button>
                 </div>
             </div>
-
-            <div class="available-dates" id="availableDatesContainer" style="display: none;">
-                <div class="available-dates-title">📋 Available Dates in Database:</div>
-                <div class="data-info">Loading available dates...</div>
-                <div class="date-list" id="dateList"></div>
-            </div>
         </div>
         
         <div class="stats-cards" id="statsContainer" style="display: none;">
@@ -426,7 +388,7 @@
         </div>
         
         <div class="chart-card" id="chartContainer" style="display: none;">
-            <div class="chart-title">📈 CO2 Trend</div>
+            <div class="chart-title" id="chartTitle">📈 CO2 Trend</div>
             <div class="chart-container">
                 <canvas id="historicalChart"></canvas>
             </div>
@@ -440,29 +402,28 @@
 
     <script>
         const firebaseConfig = {
-    apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
-    authDomain: "co2-iot-727a9.firebaseapp.com",
-    databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "co2-iot-727a9",
-    storageBucket: "co2-iot-727a9.firebasestorage.app",
-    messagingSenderId: "442178296251",
-    appId: "1:442178296251:web:057809c7bd085d1aa4cc9e",
-    measurementId: "G-TZ5NLDGX2G"
-};
-const deviceID = "ESP32_01";
+            apiKey: "AIzaSyDvcKaqEnR7uhX4p6jSumFwW4558jRV_JY",
+            authDomain: "co2-iot-727a9.firebaseapp.com",
+            databaseURL: "https://co2-iot-727a9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "co2-iot-727a9",
+            storageBucket: "co2-iot-727a9.firebasestorage.app",
+            messagingSenderId: "442178296251",
+            appId: "1:442178296251:web:057809c7bd085d1aa4cc9e"
+        };
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        let allHistoryData = [];
+        let currentSensor = 'p1';
+        const sensors = {
+            p1: { deviceID: "ESP32_01", name: "P1 Inlet", color: "#667eea" },
+            p2: { deviceID: "ESP32_02", name: "P2 Outlet", color: "#10b981" },
+            box: { deviceID: "ESP32_03", name: "Box Condition", color: "#f59e0b" },
+            init: { deviceID: "ESP32_04", name: "Initial Condition", color: "#ef4444" }
+        };
+        
         let filteredData = [];
         let chart = null;
-        
-        function updateDebug(message) {
-            const debugEl = document.getElementById('debugInfo');
-            const now = new Date().toLocaleTimeString('id-ID');
-            debugEl.innerHTML = `<strong>[${now}]</strong> ${message}`;
-        }
         
         window.onload = function() {
             const today = new Date();
@@ -471,13 +432,25 @@ const deviceID = "ESP32_01";
             
             document.getElementById('endDate').valueAsDate = today;
             document.getElementById('startDate').valueAsDate = lastWeek;
-            
-            loadAvailableDates();
-            updateDebug(`Page loaded | Device ID: ${deviceID}`);
         };
+        
+        function selectSensor(sensor) {
+            currentSensor = sensor;
+            
+            document.querySelectorAll('.sensor-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.sensor-tab').classList.add('active');
+            
+            document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('chartContainer').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
+        }
         
         function initChart() {
             const ctx = document.getElementById('historicalChart').getContext('2d');
+            const sensorColor = sensors[currentSensor].color;
+            
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -485,8 +458,8 @@ const deviceID = "ESP32_01";
                     datasets: [{
                         label: 'CO2 Level (ppm)',
                         data: [],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: sensorColor,
+                        backgroundColor: sensorColor + '20',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
@@ -498,87 +471,21 @@ const deviceID = "ESP32_01";
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
+                        legend: { display: true, position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
                     },
                     scales: {
                         y: {
                             beginAtZero: false,
-                            title: {
-                                display: true,
-                                text: 'CO2 (ppm)'
-                            }
+                            title: { display: true, text: 'CO2 (ppm)' }
                         },
                         x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            },
-                            ticks: {
-                                maxTicksLimit: 15
-                            }
+                            title: { display: true, text: 'Time' },
+                            ticks: { maxTicksLimit: 15 }
                         }
                     }
                 }
             });
-        }
-        
-        function loadAvailableDates() {
-            database.ref(`sensors/${deviceID}/history`).once('value', (snapshot) => {
-                const dates = new Set();
-                let dataCount = 0;
-                
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    const date = new Date(data.timestamp);
-                    const dateStr = date.toLocaleDateString('id-ID');
-                    dates.add(dateStr);
-                    dataCount++;
-                });
-                
-                updateDebug(`Found ${dataCount} total records across ${dates.size} unique dates`);
-                
-                const dateArray = Array.from(dates).sort((a, b) => {
-                    return new Date(b.split('/').reverse().join('-')) - 
-                           new Date(a.split('/').reverse().join('-'));
-                });
-                
-                if (dateArray.length > 0) {
-                    const container = document.getElementById('availableDatesContainer');
-                    const dateList = document.getElementById('dateList');
-                    container.style.display = 'block';
-                    
-                    dateList.innerHTML = '';
-                    dateArray.forEach(dateStr => {
-                        const chip = document.createElement('div');
-                        chip.className = 'date-chip';
-                        chip.textContent = dateStr;
-                        chip.onclick = () => selectDateFromChip(dateStr);
-                        dateList.appendChild(chip);
-                    });
-                    
-                    document.querySelector('.available-dates .data-info').textContent = 
-                        `Found ${dateArray.length} days with data. Click any date to load.`;
-                }
-            }).catch(error => {
-                updateDebug(`ERROR loading available dates: ${error.message}`);
-            });
-        }
-        
-        function selectDateFromChip(dateStr) {
-            const parts = dateStr.split('/');
-            const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            
-            document.getElementById('startDate').value = isoDate;
-            document.getElementById('endDate').value = isoDate;
-            
-            loadHistoricalData();
         }
         
         function setQuickDate(option) {
@@ -641,11 +548,13 @@ const deviceID = "ESP32_01";
             const startTimestamp = startDate.getTime();
             const endTimestamp = endDate.getTime();
             
-            updateDebug(`Loading data from ${startDate.toLocaleDateString('id-ID')} to ${endDate.toLocaleDateString('id-ID')}`);
+            const deviceID = sensors[currentSensor].deviceID;
+            const sensorName = sensors[currentSensor].name;
             
             document.getElementById('chartInfo').textContent = 'Loading data...';
             document.getElementById('statsContainer').style.display = 'none';
             document.getElementById('chartContainer').style.display = 'block';
+            document.getElementById('chartTitle').textContent = `📈 ${sensorName} CO2 Trend`;
             
             database.ref(`sensors/${deviceID}/history`).once('value', (snapshot) => {
                 filteredData = [];
@@ -662,8 +571,6 @@ const deviceID = "ESP32_01";
                 
                 filteredData.sort((a, b) => a.timestamp - b.timestamp);
                 
-                updateDebug(`Found ${filteredData.length} records for selected period`);
-                
                 if (filteredData.length === 0) {
                     document.getElementById('chartInfo').textContent = 
                         'No data found for selected date range';
@@ -678,7 +585,8 @@ const deviceID = "ESP32_01";
                 document.getElementById('downloadBtn').style.display = 'block';
                 document.getElementById('statsContainer').style.display = 'grid';
             }).catch(error => {
-                updateDebug(`ERROR loading data: ${error.message}`);
+                console.error('Error loading data:', error);
+                document.getElementById('chartInfo').textContent = 'Error loading data';
             });
         }
         
@@ -686,6 +594,11 @@ const deviceID = "ESP32_01";
             if (!chart) {
                 initChart();
             }
+            
+            // Update chart color based on current sensor
+            const sensorColor = sensors[currentSensor].color;
+            chart.data.datasets[0].borderColor = sensorColor;
+            chart.data.datasets[0].backgroundColor = sensorColor + '20';
             
             const labels = filteredData.map(d => {
                 const date = new Date(d.timestamp);
@@ -738,11 +651,12 @@ const deviceID = "ESP32_01";
                 return;
             }
             
-            let csv = 'Timestamp,DateTime,CO2 (ppm)\n';
+            const sensorName = sensors[currentSensor].name;
+            let csv = `Sensor,Timestamp,DateTime,CO2 (ppm)\n`;
             
             filteredData.forEach(d => {
                 const date = new Date(d.timestamp);
-                csv += `${d.timestamp},${date.toLocaleString('id-ID')},${d.value.toFixed(2)}\n`;
+                csv += `${sensorName},${d.timestamp},${date.toLocaleString('id-ID')},${d.value.toFixed(2)}\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -753,7 +667,7 @@ const deviceID = "ESP32_01";
             const endDate = new Date(filteredData[filteredData.length - 1].timestamp).toISOString().split('T')[0];
             
             a.href = url;
-            a.download = `CO2_historical_${startDate}_to_${endDate}.csv`;
+            a.download = `CO2_${currentSensor.toUpperCase()}_${startDate}_to_${endDate}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         }
