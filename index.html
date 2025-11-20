@@ -64,9 +64,7 @@
         .status-online { background: #10b981; color: white; }
         .status-offline { background: #ef4444; color: white; }
         
-        .sensor-section {
-            margin-bottom: 30px;
-        }
+        .sensor-section { margin-bottom: 30px; }
         
         .sensor-title {
             background: rgba(255, 255, 255, 0.15);
@@ -161,6 +159,16 @@
             font-size: 0.85em;
             margin-top: 8px;
         }
+
+        .debug-info {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -186,10 +194,12 @@
                 <span class="status-badge status-offline" id="statusInit">Init: Connecting...</span>
             </div>
         </div>
+
+        <div class="debug-info" id="debugInfo">Initializing sensors...</div>
         
         <!-- P1 SENSOR SECTION -->
         <div class="sensor-section">
-            <div class="sensor-title">🔵 P1 - Inlet Sensor (CO2 Entry Point)</div>
+            <div class="sensor-title">📍 P1 - Inlet Sensor (CO2 Entry Point)</div>
             
             <div class="cards">
                 <div class="card">
@@ -429,6 +439,10 @@
             }
         };
         
+        function updateDebug(msg) {
+            document.getElementById('debugInfo').textContent = msg;
+        }
+        
         function initChart(canvasId, color) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             return new Chart(ctx, {
@@ -469,8 +483,11 @@
         }
         
         function updateStatus(sensor, ppm) {
-            const statusEl = document.getElementById(`statusText${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`);
-            const valueEl = document.getElementById(`current${sensor.charAt(0).toUpperCase() + sensor.slice(1)}`);
+            const sensorName = sensor.charAt(0).toUpperCase() + sensor.slice(1);
+            const statusEl = document.getElementById(`statusText${sensorName}`);
+            const valueEl = document.getElementById(`current${sensorName}`);
+            
+            if (!statusEl || !valueEl) return;
             
             if (ppm < 800) {
                 statusEl.textContent = 'Good - Fresh Air';
@@ -491,23 +508,37 @@
             const deviceID = sensors[sensor].deviceID;
             const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
             
-            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            // Try to read from latest data
+            database.ref(`sensors/${deviceID}`).on('value', (snapshot) => {
                 const data = snapshot.val();
+                
                 if (data) {
-                    const ppm = Math.round(data.value);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
+                    // Check multiple possible field names
+                    let co2Value = data.co2 || data.value || data.CO2 || null;
                     
-                    document.getElementById(`current${sensorCap}`).textContent = ppm;
-                    updateStatus(sensor, ppm);
-                    
-                    const statusBadge = document.getElementById(`status${sensorCap}`);
-                    statusBadge.textContent = `${sensorCap}: Online`;
-                    statusBadge.className = 'status-badge status-online';
-                    
-                    if (sensors[sensor].historyData.length === 0) {
-                        loadHistoryData(sensor);
+                    if (co2Value !== null && co2Value !== undefined) {
+                        const ppm = Math.round(co2Value);
+                        
+                        document.getElementById(`current${sensorCap}`).textContent = ppm;
+                        updateStatus(sensor, ppm);
+                        
+                        const statusBadge = document.getElementById(`status${sensorCap}`);
+                        if (statusBadge) {
+                            statusBadge.textContent = `${sensorCap}: Online`;
+                            statusBadge.className = 'status-badge status-online';
+                        }
+                        
+                        updateDebug(`Connected to all sensors`);
+                        
+                        if (sensors[sensor].historyData.length === 0) {
+                            loadHistoryData(sensor);
+                        }
+                    } else {
+                        updateDebug(`No CO2 data found in ${deviceID}. Available fields: ${Object.keys(data).join(', ')}`);
                     }
                 }
+            }, (error) => {
+                updateDebug(`Error reading ${deviceID}: ${error.message}`);
             });
             
             sensors[sensor].chart = initChart(`chart${sensorCap}`, sensors[sensor].color);
@@ -526,10 +557,12 @@
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        if (data && data.timestamp >= cutoff && data.value >= 200 && data.value <= 5000) {
+                        let co2Val = data.co2 || data.value || data.CO2;
+                        
+                        if (data && data.timestamp >= cutoff && co2Val >= 200 && co2Val <= 5000) {
                             sensors[sensor].historyData.push({
                                 timestamp: data.timestamp,
-                                value: data.value
+                                value: co2Val
                             });
                         }
                     });
@@ -547,10 +580,12 @@
             const timeRange = sensors[sensor].timeRange;
             const sensorCap = sensor.charAt(0).toUpperCase() + sensor.slice(1);
             
-            if (data.length === 0) {
-                chart.data.labels = [];
-                chart.data.datasets[0].data = [];
-                chart.update();
+            if (!chart || data.length === 0) {
+                if (chart) {
+                    chart.data.labels = [];
+                    chart.data.datasets[0].data = [];
+                    chart.update();
+                }
                 document.getElementById(`chartInfo${sensorCap}`).textContent = 'No data';
                 return;
             }
@@ -574,8 +609,7 @@
             chart.data.datasets[0].data = values;
             chart.update();
             
-            document.getElementById(`chartInfo${sensorCap}`).textContent = 
-                `${filtered.length} points`;
+            document.getElementById(`chartInfo${sensorCap}`).textContent = `${filtered.length} points`;
         }
         
         function updateStats(sensor) {
