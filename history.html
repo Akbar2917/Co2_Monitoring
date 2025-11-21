@@ -561,10 +561,10 @@
                 
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
-                    if (data.timestamp >= startTimestamp && data.timestamp <= endTimestamp) {
+                    if (data && data.co2 && data.timestamp >= startTimestamp && data.timestamp <= endTimestamp) {
                         filteredData.push({
                             timestamp: data.timestamp,
-                            value: data.value
+                            value: data.co2
                         });
                     }
                 });
