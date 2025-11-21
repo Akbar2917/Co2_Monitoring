@@ -572,8 +572,11 @@
             // Listen to latest data
             database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data && data.co2) {
-                    const ppm = Math.round(data.co2);
+                console.log(`${sensorCap} status data:`, data);
+                
+                if (data) {
+                    // Prioritas: gunakan 'co2', fallback ke 'value'
+                    const ppm = Math.round(data.co2 || data.value || 0);
                     const timestamp = data.timestamp;
                     const age = Math.round((Date.now() - timestamp) / 1000);
                     const date = new Date(timestamp);
@@ -639,9 +642,11 @@
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        if (data && data.co2 && data.timestamp >= cutoff) {
+                        const co2Value = data.co2 || data.value;
+                        
+                        if (data && co2Value && data.timestamp >= cutoff) {
                             count++;
-                            sum += data.co2;
+                            sum += co2Value;
                         }
                     });
                     
