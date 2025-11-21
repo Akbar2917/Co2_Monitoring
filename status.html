@@ -572,8 +572,8 @@
             // Listen to latest data
             database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.value);
+                if (data && data.co2) {
+                    const ppm = Math.round(data.co2);
                     const timestamp = data.timestamp;
                     const age = Math.round((Date.now() - timestamp) / 1000);
                     const date = new Date(timestamp);
@@ -639,9 +639,9 @@
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        if (data && data.timestamp >= cutoff) {
+                        if (data && data.co2 && data.timestamp >= cutoff) {
                             count++;
-                            sum += data.value;
+                            sum += data.co2;
                         }
                     });
                     
