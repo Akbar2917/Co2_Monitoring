@@ -495,8 +495,8 @@
             
             database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.value);
+                if (data && data.co2) {
+                    const ppm = Math.round(data.co2);
                     const age = Math.round((Date.now() - data.timestamp) / 1000);
                     
                     document.getElementById(`current${sensorCap}`).textContent = ppm;
@@ -528,10 +528,10 @@
                     
                     snapshot.forEach((child) => {
                         const data = child.val();
-                        if (data && data.timestamp >= cutoff && data.value >= 200 && data.value <= 5000) {
+                        if (data && data.co2 && data.timestamp >= cutoff && data.co2 >= 200 && data.co2 <= 5000) {
                             sensors[sensor].historyData.push({
                                 timestamp: data.timestamp,
-                                value: data.value
+                                value: data.co2
                             });
                         }
                     });
