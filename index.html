@@ -85,7 +85,6 @@
             gap: 10px;
         }
         
-        /* Cluster Grid - 3 columns for 6 tabung/box */
         .cluster-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -176,7 +175,6 @@
         .status-warning { background: #fef3c7; color: #92400e; }
         .status-danger { background: #fee2e2; color: #991b1b; }
         
-        /* Chart Section */
         .chart-section {
             background: white;
             border-radius: 15px;
@@ -226,7 +224,6 @@
             margin-top: 10px;
         }
         
-        /* Init Sensor - Single Card */
         .init-section {
             max-width: 400px;
         }
@@ -271,7 +268,6 @@
         .init-card .cluster-name { color: #6366f1; }
         .init-card .cluster-header { border-bottom-color: #6366f1; }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .cluster-grid {
                 grid-template-columns: 1fr;
@@ -345,7 +341,7 @@
                     <select id="chartSensorSelect" class="chart-btn" onchange="updateChartSensor()">
                         <optgroup label="Tabung">
                             <option value="tabung1">Tabung 1</option>
-                            <option value="tabung2">Tabung 2</option>
+                            <option value="tabung2" selected>Tabung 2</option>
                             <option value="tabung3">Tabung 3</option>
                             <option value="tabung4">Tabung 4</option>
                             <option value="tabung5">Tabung 5</option>
@@ -392,59 +388,62 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        // Sensor Configuration - 6 Tabung (masing-masing P1, P2), 6 Box, 1 Init
-        // NOTE: Update deviceID sesuai dengan ESP32 yang sebenarnya
+        // ========================================
+        // SENSOR CONFIGURATION - SESUAI ARDUINO
+        // ========================================
+        // Arduino path: tabung2/P1/latest, tabung2/P2/latest
+        // Arduino path: tabung2/P1/history, tabung2/P2/history
+        // ========================================
+        
         const sensorConfig = {
-            // Tabung 1-6 (masing-masing punya P1 dan P2)
+            // Tabung 1-6 - SESUAI FORMAT ARDUINO: tabungX/P1 dan tabungX/P2
             tabung1: {
-                p1: { deviceID: "ESP32_T1_P1", color: "#3b82f6" },
-                p2: { deviceID: "ESP32_T1_P2", color: "#60a5fa" }
+                tabungName: "tabung1",  // Path di Firebase
+                p1: { color: "#3b82f6" },
+                p2: { color: "#60a5fa" }
             },
             tabung2: {
-                p1: { deviceID: "ESP32_T2_P1", color: "#10b981" },
-                p2: { deviceID: "ESP32_T2_P2", color: "#34d399" }
+                tabungName: "tabung2",  // Path di Firebase - INI YANG AKTIF
+                p1: { color: "#10b981" },
+                p2: { color: "#34d399" }
             },
             tabung3: {
-                p1: { deviceID: "ESP32_T3_P1", color: "#f59e0b" },
-                p2: { deviceID: "ESP32_T3_P2", color: "#fbbf24" }
+                tabungName: "tabung3",
+                p1: { color: "#f59e0b" },
+                p2: { color: "#fbbf24" }
             },
             tabung4: {
-                p1: { deviceID: "ESP32_T4_P1", color: "#ef4444" },
-                p2: { deviceID: "ESP32_T4_P2", color: "#f87171" }
+                tabungName: "tabung4",
+                p1: { color: "#ef4444" },
+                p2: { color: "#f87171" }
             },
             tabung5: {
-                p1: { deviceID: "ESP32_T5_P1", color: "#8b5cf6" },
-                p2: { deviceID: "ESP32_T5_P2", color: "#a78bfa" }
+                tabungName: "tabung5",
+                p1: { color: "#8b5cf6" },
+                p2: { color: "#a78bfa" }
             },
             tabung6: {
-                p1: { deviceID: "ESP32_T6_P1", color: "#ec4899" },
-                p2: { deviceID: "ESP32_T6_P2", color: "#f472b6" }
+                tabungName: "tabung6",
+                p1: { color: "#ec4899" },
+                p2: { color: "#f472b6" }
             },
-            // Box 1-6
-            box1: { deviceID: "ESP32_B1", color: "#06b6d4" },
-            box2: { deviceID: "ESP32_B2", color: "#84cc16" },
-            box3: { deviceID: "ESP32_B3", color: "#f97316" },
-            box4: { deviceID: "ESP32_B4", color: "#dc2626" },
-            box5: { deviceID: "ESP32_B5", color: "#7c3aed" },
-            box6: { deviceID: "ESP32_B6", color: "#db2777" },
-            // Init 1
-            init1: { deviceID: "ESP32_INIT", color: "#6366f1" }
-        };
-        
-        // Fallback untuk demo - gunakan sensor yang sudah ada
-        // Jika sensor baru belum tersedia, bisa pakai data dari ESP32_01-04
-        const fallbackDevices = {
-            "ESP32_T1_P1": "ESP32_01",
-            "ESP32_T1_P2": "ESP32_02",
-            "ESP32_B1": "ESP32_03",
-            "ESP32_INIT": "ESP32_04"
+            // Box 1-6 - format: boxX/latest
+            box1: { basePath: "box1", color: "#06b6d4" },
+            box2: { basePath: "box2", color: "#84cc16" },
+            box3: { basePath: "box3", color: "#f97316" },
+            box4: { basePath: "box4", color: "#dc2626" },
+            box5: { basePath: "box5", color: "#7c3aed" },
+            box6: { basePath: "box6", color: "#db2777" },
+            // Init - format: init1/latest
+            init1: { basePath: "init1", color: "#6366f1" }
         };
         
         // State management
         let sensorData = {};
         let currentTimeRange = 6;
-        let currentChartSensor = 'tabung1';
+        let currentChartSensor = 'tabung2';  // Default ke tabung2 karena itu yang aktif
         let mainChart = null;
+        let tabungValues = {};  // Store P1/P2 values per tabung
         
         // Generate HTML for Tabung cards
         function generateTabungCards() {
@@ -477,6 +476,9 @@
                     </div>
                     <div class="sensor-status status-good" id="tabung${i}Status">Loading...</div>
                 </div>`;
+                
+                // Initialize values storage
+                tabungValues[`tabung${i}`] = { p1: null, p2: null };
             }
             
             grid.innerHTML = html;
@@ -508,7 +510,7 @@
             grid.innerHTML = html;
         }
         
-        // Generate HTML for Init card (only 1)
+        // Generate Init card
         function generateInitCards() {
             const grid = document.getElementById('initGrid');
             grid.innerHTML = `
@@ -534,81 +536,90 @@
             let html = '';
             
             for (let i = 1; i <= 6; i++) {
-                html += `<span class="status-badge status-offline" id="badgeT${i}">T${i}: --</span>`;
+                html += `<span class="status-badge status-offline" id="badgeT${i}">T${i}: Offline</span>`;
             }
             for (let i = 1; i <= 6; i++) {
-                html += `<span class="status-badge status-offline" id="badgeB${i}">B${i}: --</span>`;
+                html += `<span class="status-badge status-offline" id="badgeB${i}">B${i}: Offline</span>`;
             }
-            html += `<span class="status-badge status-offline" id="badgeInit">Init: --</span>`;
+            html += `<span class="status-badge status-offline" id="badgeInit">Init: Offline</span>`;
             
             container.innerHTML = html;
         }
         
-        // Get device ID with fallback
-        function getDeviceID(configID) {
-            return fallbackDevices[configID] || configID;
-        }
-        
-        // Update status indicator
+        // Helper function to get CO2 status
         function updateStatusIndicator(ppm) {
-            if (ppm < 800) {
-                return { text: 'Good - Fresh Air', class: 'status-good', color: '#10b981' };
-            } else if (ppm < 1200) {
-                return { text: 'Warning - Ventilate', class: 'status-warning', color: '#f59e0b' };
-            } else {
-                return { text: 'Danger - Poor Air', class: 'status-danger', color: '#ef4444' };
-            }
+            if (ppm < 800) return { text: '✅ Excellent', class: 'status-good' };
+            if (ppm < 1000) return { text: '👍 Good', class: 'status-good' };
+            if (ppm < 1500) return { text: '⚠️ Moderate', class: 'status-warning' };
+            if (ppm < 2000) return { text: '⚠️ Poor', class: 'status-warning' };
+            return { text: '🚨 Danger', class: 'status-danger' };
         }
         
-        // Setup Tabung sensors
+        // ========================================
+        // SETUP TABUNG SENSORS - FIXED PATH
+        // Path: tabungX/P1/latest dan tabungX/P2/latest
+        // ========================================
         function setupTabungSensor(tabungNum) {
-            const p1Config = sensorConfig[`tabung${tabungNum}`].p1;
-            const p2Config = sensorConfig[`tabung${tabungNum}`].p2;
+            const config = sensorConfig[`tabung${tabungNum}`];
+            const tabungName = config.tabungName;  // e.g., "tabung2"
             
-            const p1DeviceID = getDeviceID(p1Config.deviceID);
-            const p2DeviceID = getDeviceID(p2Config.deviceID);
+            // Path untuk P1: tabung2/P1/latest
+            const p1Path = `${tabungName}/P1/latest`;
+            // Path untuk P2: tabung2/P2/latest
+            const p2Path = `${tabungName}/P2/latest`;
             
-            let p1Value = null;
-            let p2Value = null;
+            console.log(`Setting up Tabung ${tabungNum}:`);
+            console.log(`  P1 path: ${p1Path}`);
+            console.log(`  P2 path: ${p2Path}`);
             
             // Listen to P1
-            database.ref(`sensors/${p1DeviceID}/latest`).on('value', (snapshot) => {
+            database.ref(p1Path).on('value', (snapshot) => {
                 const data = snapshot.val();
+                console.log(`Tabung ${tabungNum} P1 data:`, data);
+                
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
                     
-                    p1Value = ppm;
                     document.getElementById(`tabung${tabungNum}P1Value`).textContent = ppm;
+                    tabungValues[`tabung${tabungNum}`].p1 = ppm;
                     
-                    updateTabungAvg(tabungNum, p1Value, p2Value);
+                    updateTabungAvg(tabungNum);
                     updateTabungStatus(tabungNum, age);
                 }
             });
             
             // Listen to P2
-            database.ref(`sensors/${p2DeviceID}/latest`).on('value', (snapshot) => {
+            database.ref(p2Path).on('value', (snapshot) => {
                 const data = snapshot.val();
+                console.log(`Tabung ${tabungNum} P2 data:`, data);
+                
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
                     
-                    p2Value = ppm;
                     document.getElementById(`tabung${tabungNum}P2Value`).textContent = ppm;
+                    tabungValues[`tabung${tabungNum}`].p2 = ppm;
                     
-                    updateTabungAvg(tabungNum, p1Value, p2Value);
+                    updateTabungAvg(tabungNum);
                 }
             });
             
-            // Store history data
+            // Initialize storage for history
             if (!sensorData[`tabung${tabungNum}`]) {
                 sensorData[`tabung${tabungNum}`] = { p1: [], p2: [] };
             }
             
-            loadTabungHistory(tabungNum, 'p1', p1DeviceID);
-            loadTabungHistory(tabungNum, 'p2', p2DeviceID);
+            // Load history data
+            loadTabungHistory(tabungNum, 'P1');
+            loadTabungHistory(tabungNum, 'P2');
         }
         
-        function updateTabungAvg(tabungNum, p1, p2) {
+        function updateTabungAvg(tabungNum) {
+            const values = tabungValues[`tabung${tabungNum}`];
+            const p1 = values.p1;
+            const p2 = values.p2;
+            
             if (p1 !== null && p2 !== null) {
                 const avg = Math.round((p1 + p2) / 2);
                 document.getElementById(`tabung${tabungNum}AvgValue`).textContent = avg;
@@ -623,6 +634,12 @@
                 const statusEl = document.getElementById(`tabung${tabungNum}Status`);
                 statusEl.textContent = status.text;
                 statusEl.className = `sensor-status ${status.class}`;
+            } else if (p2 !== null) {
+                document.getElementById(`tabung${tabungNum}AvgValue`).textContent = p2;
+                const status = updateStatusIndicator(p2);
+                const statusEl = document.getElementById(`tabung${tabungNum}Status`);
+                statusEl.textContent = status.text;
+                statusEl.className = `sensor-status ${status.class}`;
             }
         }
         
@@ -630,29 +647,78 @@
             const statusEl = document.getElementById(`statusTabung${tabungNum}`);
             const badgeEl = document.getElementById(`badgeT${tabungNum}`);
             
-            if (age < 120) {
+            if (age < 120) {  // Online if data < 2 minutes old
                 statusEl.textContent = 'Online';
                 statusEl.className = 'cluster-status status-online';
-                badgeEl.textContent = `T${tabungNum}: Online`;
-                badgeEl.className = 'status-badge status-online';
+                if (badgeEl) {
+                    badgeEl.textContent = `T${tabungNum}: Online`;
+                    badgeEl.className = 'status-badge status-online';
+                }
             } else {
                 statusEl.textContent = 'Offline';
                 statusEl.className = 'cluster-status status-offline';
-                badgeEl.textContent = `T${tabungNum}: Offline`;
-                badgeEl.className = 'status-badge status-offline';
+                if (badgeEl) {
+                    badgeEl.textContent = `T${tabungNum}: Offline`;
+                    badgeEl.className = 'status-badge status-offline';
+                }
             }
         }
         
-        // Setup Box sensors
+        // Load Tabung History - Fixed path: tabungX/P1/history
+        function loadTabungHistory(tabungNum, point) {
+            const config = sensorConfig[`tabung${tabungNum}`];
+            const tabungName = config.tabungName;
+            const historyPath = `${tabungName}/${point}/history`;
+            
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            
+            console.log(`Loading history from: ${historyPath}`);
+            
+            database.ref(historyPath)
+                .limitToLast(1500)
+                .once('value')
+                .then((snapshot) => {
+                    const data = [];
+                    
+                    snapshot.forEach((child) => {
+                        const d = child.val();
+                        const co2 = d.co2 || d.value;
+                        const timestamp = d.ts || d.timestamp;
+                        
+                        if (d && co2 && timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
+                            data.push({ timestamp: timestamp, value: co2 });
+                        }
+                    });
+                    
+                    data.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    // Store with lowercase key for consistency
+                    const pointKey = point.toLowerCase();
+                    sensorData[`tabung${tabungNum}`][pointKey] = data;
+                    
+                    console.log(`Loaded ${data.length} history points for Tabung ${tabungNum} ${point}`);
+                    
+                    if (currentChartSensor === `tabung${tabungNum}`) {
+                        updateMainChart();
+                    }
+                })
+                .catch(err => console.error(`Error loading history for ${historyPath}:`, err));
+        }
+        
+        // Setup Box sensors - Path: boxX/latest
         function setupBoxSensor(boxNum) {
             const config = sensorConfig[`box${boxNum}`];
-            const deviceID = getDeviceID(config.deviceID);
+            const basePath = config.basePath;
+            const latestPath = `${basePath}/latest`;
             
-            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            console.log(`Setting up Box ${boxNum} at path: ${latestPath}`);
+            
+            database.ref(latestPath).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
                     
                     document.getElementById(`box${boxNum}Value`).textContent = ppm;
                     
@@ -667,35 +733,73 @@
                     if (age < 120) {
                         clusterStatus.textContent = 'Online';
                         clusterStatus.className = 'cluster-status status-online';
-                        badgeEl.textContent = `B${boxNum}: Online`;
-                        badgeEl.className = 'status-badge status-online';
+                        if (badgeEl) {
+                            badgeEl.textContent = `B${boxNum}: Online`;
+                            badgeEl.className = 'status-badge status-online';
+                        }
                     } else {
                         clusterStatus.textContent = 'Offline';
                         clusterStatus.className = 'cluster-status status-offline';
-                        badgeEl.textContent = `B${boxNum}: Offline`;
-                        badgeEl.className = 'status-badge status-offline';
+                        if (badgeEl) {
+                            badgeEl.textContent = `B${boxNum}: Offline`;
+                            badgeEl.className = 'status-badge status-offline';
+                        }
                     }
                 }
             });
             
-            // Store history data
+            // Initialize storage
             if (!sensorData[`box${boxNum}`]) {
                 sensorData[`box${boxNum}`] = [];
             }
             
-            loadBoxHistory(boxNum, deviceID);
+            loadBoxHistory(boxNum);
+        }
+        
+        // Load Box History
+        function loadBoxHistory(boxNum) {
+            const config = sensorConfig[`box${boxNum}`];
+            const historyPath = `${config.basePath}/history`;
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            
+            database.ref(historyPath)
+                .limitToLast(1500)
+                .once('value')
+                .then((snapshot) => {
+                    const data = [];
+                    
+                    snapshot.forEach((child) => {
+                        const d = child.val();
+                        const co2 = d.co2 || d.value;
+                        const timestamp = d.ts || d.timestamp;
+                        
+                        if (d && co2 && timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
+                            data.push({ timestamp: timestamp, value: co2 });
+                        }
+                    });
+                    
+                    data.sort((a, b) => a.timestamp - b.timestamp);
+                    sensorData[`box${boxNum}`] = data;
+                    
+                    if (currentChartSensor === `box${boxNum}`) {
+                        updateMainChart();
+                    }
+                });
         }
         
         // Setup Init sensor
         function setupInitSensor() {
             const config = sensorConfig.init1;
-            const deviceID = getDeviceID(config.deviceID);
+            const latestPath = `${config.basePath}/latest`;
             
-            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            console.log(`Setting up Init at path: ${latestPath}`);
+            
+            database.ref(latestPath).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
                     
                     document.getElementById('init1Value').textContent = ppm;
                     
@@ -710,30 +814,36 @@
                     if (age < 120) {
                         clusterStatus.textContent = 'Online';
                         clusterStatus.className = 'cluster-status status-online';
-                        badgeEl.textContent = 'Init: Online';
-                        badgeEl.className = 'status-badge status-online';
+                        if (badgeEl) {
+                            badgeEl.textContent = 'Init: Online';
+                            badgeEl.className = 'status-badge status-online';
+                        }
                     } else {
                         clusterStatus.textContent = 'Offline';
                         clusterStatus.className = 'cluster-status status-offline';
-                        badgeEl.textContent = 'Init: Offline';
-                        badgeEl.className = 'status-badge status-offline';
+                        if (badgeEl) {
+                            badgeEl.textContent = 'Init: Offline';
+                            badgeEl.className = 'status-badge status-offline';
+                        }
                     }
                 }
             });
             
-            // Store history data
+            // Initialize storage
             if (!sensorData.init1) {
                 sensorData.init1 = [];
             }
             
-            loadInitHistory(deviceID);
+            loadInitHistory();
         }
         
-        // Load history functions
-        function loadTabungHistory(tabungNum, point, deviceID) {
+        // Load Init History
+        function loadInitHistory() {
+            const config = sensorConfig.init1;
+            const historyPath = `${config.basePath}/history`;
             const cutoff = Date.now() - (24 * 60 * 60 * 1000);
             
-            database.ref(`sensors/${deviceID}/history`)
+            database.ref(historyPath)
                 .limitToLast(1500)
                 .once('value')
                 .then((snapshot) => {
@@ -742,63 +852,10 @@
                     snapshot.forEach((child) => {
                         const d = child.val();
                         const co2 = d.co2 || d.value;
+                        const timestamp = d.ts || d.timestamp;
                         
-                        if (d && co2 && d.timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
-                            data.push({ timestamp: d.timestamp, value: co2 });
-                        }
-                    });
-                    
-                    data.sort((a, b) => a.timestamp - b.timestamp);
-                    sensorData[`tabung${tabungNum}`][point] = data;
-                    
-                    if (currentChartSensor === `tabung${tabungNum}`) {
-                        updateMainChart();
-                    }
-                });
-        }
-        
-        function loadBoxHistory(boxNum, deviceID) {
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            
-            database.ref(`sensors/${deviceID}/history`)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    const data = [];
-                    
-                    snapshot.forEach((child) => {
-                        const d = child.val();
-                        const co2 = d.co2 || d.value;
-                        
-                        if (d && co2 && d.timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
-                            data.push({ timestamp: d.timestamp, value: co2 });
-                        }
-                    });
-                    
-                    data.sort((a, b) => a.timestamp - b.timestamp);
-                    sensorData[`box${boxNum}`] = data;
-                    
-                    if (currentChartSensor === `box${boxNum}`) {
-                        updateMainChart();
-                    }
-                });
-        }
-        
-        function loadInitHistory(deviceID) {
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            
-            database.ref(`sensors/${deviceID}/history`)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    const data = [];
-                    
-                    snapshot.forEach((child) => {
-                        const d = child.val();
-                        const co2 = d.co2 || d.value;
-                        
-                        if (d && co2 && d.timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
-                            data.push({ timestamp: d.timestamp, value: co2 });
+                        if (d && co2 && timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
+                            data.push({ timestamp: timestamp, value: co2 });
                         }
                     });
                     
@@ -969,6 +1026,12 @@
         
         // Initialize everything
         function init() {
+            console.log('Initializing CO2 Dashboard...');
+            console.log('Firebase paths:');
+            console.log('- Tabung: tabungX/P1/latest, tabungX/P2/latest');
+            console.log('- Box: boxX/latest');
+            console.log('- Init: init1/latest');
+            
             generateTabungCards();
             generateBoxCards();
             generateInitCards();
@@ -989,17 +1052,11 @@
         // Auto-refresh history every 5 minutes
         setInterval(() => {
             for (let i = 1; i <= 6; i++) {
-                const p1ID = getDeviceID(sensorConfig[`tabung${i}`].p1.deviceID);
-                const p2ID = getDeviceID(sensorConfig[`tabung${i}`].p2.deviceID);
-                loadTabungHistory(i, 'p1', p1ID);
-                loadTabungHistory(i, 'p2', p2ID);
-                
-                const boxID = getDeviceID(sensorConfig[`box${i}`].deviceID);
-                loadBoxHistory(i, boxID);
+                loadTabungHistory(i, 'P1');
+                loadTabungHistory(i, 'P2');
+                loadBoxHistory(i);
             }
-            
-            const initID = getDeviceID(sensorConfig.init1.deviceID);
-            loadInitHistory(initID);
+            loadInitHistory();
         }, 5 * 60 * 1000);
         
         // Start
