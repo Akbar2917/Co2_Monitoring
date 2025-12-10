@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor - Sensor Status</title>
+    <title>CO2 Monitor - Historical Data</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -16,7 +17,7 @@
             padding: 20px;
         }
         
-        .container { max-width: 1900px; margin: 0 auto; }
+        .container { max-width: 1600px; margin: 0 auto; }
         
         .nav-menu {
             background: rgba(255, 255, 255, 0.95);
@@ -51,216 +52,257 @@
         .header { text-align: center; color: white; margin-bottom: 30px; }
         .header h1 { font-size: 2.5em; margin-bottom: 10px; }
         
-        .section-title {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 12px;
-            font-size: 1.4em;
-            font-weight: bold;
-            margin: 25px 0 15px 0;
-            backdrop-filter: blur(10px);
-        }
-        
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .sensor-card {
+        .selector-card {
             background: white;
             border-radius: 15px;
-            padding: 20px;
+            padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
         }
         
-        .sensor-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid #f0f0f0;
-        }
-        
-        .sensor-name {
+        .selector-title {
             font-size: 1.3em;
             font-weight: bold;
             color: #667eea;
+            margin-bottom: 20px;
         }
         
-        .sensor-id {
-            font-size: 0.8em;
-            color: #888;
-            font-family: monospace;
-        }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.85em;
-        }
-        
-        .status-online { background: #10b981; color: white; }
-        .status-offline { background: #ef4444; color: white; }
-        .status-warning { background: #f59e0b; color: white; }
-        
-        .health-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        .health-good { background: white; }
-        .health-bad { background: #fca5a5; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .info-item {
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        
-        .info-label {
-            font-size: 0.75em;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-        }
-        
-        .info-value {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .stats-row {
+        .sensor-type-tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
         }
         
-        .stat-item {
-            flex: 1;
-            min-width: 80px;
-            padding: 10px;
-            background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        .type-tab {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .type-tab:hover { border-color: #667eea; }
+        .type-tab.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        .sensor-select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .sensor-select-item {
+            padding: 15px;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
             text-align: center;
+            transition: all 0.3s;
+            background: white;
         }
         
-        .stat-label {
-            font-size: 0.7em;
-            color: #666;
-            text-transform: uppercase;
+        .sensor-select-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
         }
         
-        .stat-value {
+        .sensor-select-item.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .sensor-select-title {
             font-size: 1.1em;
             font-weight: bold;
-            color: #667eea;
         }
         
-        .control-section {
-            padding-top: 15px;
-            border-top: 2px solid #f0f0f0;
+        .sensor-select-subtitle {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
         }
         
-        .control-title {
-            font-size: 0.9em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #667eea;
+        .date-selector-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
         }
         
-        .control-buttons {
+        .date-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .date-input-group {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
         }
         
-        .btn {
-            padding: 8px 20px;
+        .date-input-group label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #666;
+        }
+        
+        .date-input-group input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .date-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-primary {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.85em;
+            font-size: 1em;
             transition: all 0.3s;
         }
         
-        .btn-enable { background: #10b981; color: white; }
-        .btn-enable:hover { background: #059669; transform: translateY(-2px); }
-        
-        .btn-disable { background: #ef4444; color: white; }
-        .btn-disable:hover { background: #dc2626; transform: translateY(-2px); }
-        
-        .log-section {
-            margin-top: 12px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            max-height: 120px;
-            overflow-y: auto;
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
         }
         
-        .log-title {
-            font-size: 0.8em;
-            font-weight: bold;
-            margin-bottom: 6px;
+        .btn-secondary {
+            padding: 12px 30px;
+            background: white;
             color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
         }
         
-        .log-entry {
-            font-size: 0.75em;
-            font-family: monospace;
-            padding: 3px 0;
+        .btn-secondary:hover { background: #f0f0f0; }
+        
+        .quick-dates {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .quick-date-btn {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            color: #667eea;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .quick-date-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+            display: none;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .chart-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        
+        .chart-info {
+            text-align: center;
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
             color: #666;
-            border-bottom: 1px solid #eee;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .log-entry:last-child { border-bottom: none; }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 5px;
+        }
         
-        /* Color coding for different sensor types */
-        .tabung-card .sensor-header { border-bottom-color: #3b82f6; }
-        .tabung-card .sensor-name { color: #3b82f6; }
-        
-        .box-card .sensor-header { border-bottom-color: #f59e0b; }
-        .box-card .sensor-name { color: #f59e0b; }
-        
-        .init-card .sensor-header { border-bottom-color: #8b5cf6; }
-        .init-card .sensor-name { color: #8b5cf6; }
-        
-        /* Init section - single column */
-        .init-section {
-            max-width: 400px;
+        .stat-unit {
+            font-size: 0.8em;
+            color: #888;
         }
         
         @media (max-width: 768px) {
-            .sensor-grid {
-                grid-template-columns: 1fr;
+            .sensor-select-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
-            .info-grid {
-                grid-template-columns: 1fr;
+            .chart-container {
+                height: 300px;
             }
         }
     </style>
@@ -273,32 +315,94 @@
             </div>
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">📊 Dashboard</a>
-                <a href="status.html" class="nav-btn active">🔧 Status Sensors</a>
-                <a href="history.html" class="nav-btn">📅 Historical</a>
+                <a href="status.html" class="nav-btn">🔧 Status Sensors</a>
+                <a href="history.html" class="nav-btn active">📅 Historical</a>
             </div>
         </div>
         
         <div class="header">
-            <h1>🔧 Sensor Status & Control</h1>
-            <p>Monitor and control all sensors (6 Tabung, 6 Box, 1 Init)</p>
+            <h1>📅 Historical Data</h1>
+            <p>View and analyze historical CO2 data from all sensors</p>
         </div>
         
-        <!-- TABUNG SECTION -->
-        <div class="section-title">🧪 Tabung Sensors (1-6)</div>
-        <div class="sensor-grid" id="tabungStatusGrid">
-            <!-- Generated dynamically -->
+        <!-- Sensor Selector -->
+        <div class="selector-card">
+            <div class="selector-title">📡 Select Sensor</div>
+            
+            <div class="sensor-type-tabs">
+                <div class="type-tab active" onclick="selectSensorType('tabung')">🧪 Tabung (1-6)</div>
+                <div class="type-tab" onclick="selectSensorType('box')">📦 Box (1-6)</div>
+                <div class="type-tab" onclick="selectSensorType('init')">🎯 Init</div>
+            </div>
+            
+            <div class="sensor-select-grid" id="sensorSelectGrid">
+                <!-- Generated dynamically -->
+            </div>
         </div>
         
-        <!-- BOX SECTION -->
-        <div class="section-title">📦 Box Sensors (1-6)</div>
-        <div class="sensor-grid" id="boxStatusGrid">
-            <!-- Generated dynamically -->
+        <!-- Date Selector -->
+        <div class="date-selector-card">
+            <div class="selector-title">📆 Select Date Range</div>
+            
+            <div class="date-controls">
+                <div class="date-input-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="date-input-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-primary" onclick="loadHistoricalData()">📊 Load Data</button>
+                <button class="btn-secondary" onclick="resetDates()">🔄 Reset</button>
+                <button class="btn-secondary" id="downloadBtn" onclick="downloadCSV()" style="display: none;">📥 Download CSV</button>
+            </div>
+            
+            <div class="quick-dates">
+                <button class="quick-date-btn" onclick="setQuickDate('today')">Today</button>
+                <button class="quick-date-btn" onclick="setQuickDate('yesterday')">Yesterday</button>
+                <button class="quick-date-btn" onclick="setQuickDate('last7days')">Last 7 Days</button>
+                <button class="quick-date-btn" onclick="setQuickDate('last30days')">Last 30 Days</button>
+                <button class="quick-date-btn" onclick="setQuickDate('thismonth')">This Month</button>
+            </div>
         </div>
         
-        <!-- INIT SECTION -->
-        <div class="section-title">🎯 Kondisi Awal</div>
-        <div class="sensor-grid init-section" id="initStatusGrid">
-            <!-- Generated dynamically -->
+        <!-- Statistics -->
+        <div class="stats-grid" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-label">Average</div>
+                <div class="stat-value" id="avgValue">--</div>
+                <div class="stat-unit">ppm</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Maximum</div>
+                <div class="stat-value" id="maxValue">--</div>
+                <div class="stat-unit">ppm</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Minimum</div>
+                <div class="stat-value" id="minValue">--</div>
+                <div class="stat-unit">ppm</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Data Points</div>
+                <div class="stat-value" id="dataCount">--</div>
+                <div class="stat-unit">readings</div>
+            </div>
+        </div>
+        
+        <!-- Chart -->
+        <div class="chart-card" id="chartContainer">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle">📈 CO2 Trend</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+            <div class="chart-info" id="chartInfo">Select a sensor and date range to view data</div>
         </div>
     </div>
 
@@ -319,116 +423,54 @@
         // ========================================
         // SENSOR CONFIGURATION - SESUAI ARDUINO
         // ========================================
-        // Arduino path: tabung2/P1/latest, tabung2/P2/latest
-        // Control path: control/tabung2/P1/enabled, control/tabung2/P2/enabled
+        // Arduino path: tabung2/P1/history, tabung2/P2/history
         // ========================================
         
         const sensorConfig = {
-            // Tabung 1-6 - path: tabungX/P1 dan tabungX/P2
-            tabung1: { tabungName: "tabung1" },
-            tabung2: { tabungName: "tabung2" },  // INI YANG AKTIF
-            tabung3: { tabungName: "tabung3" },
-            tabung4: { tabungName: "tabung4" },
-            tabung5: { tabungName: "tabung5" },
-            tabung6: { tabungName: "tabung6" },
-            // Box 1-6 - path: boxX/latest
-            box1: { basePath: "box1" },
-            box2: { basePath: "box2" },
-            box3: { basePath: "box3" },
-            box4: { basePath: "box4" },
-            box5: { basePath: "box5" },
-            box6: { basePath: "box6" },
-            // Init - path: init1/latest
-            init1: { basePath: "init1" }
+            tabung: {
+                1: { name: "Tabung 1", tabungName: "tabung1", color: "#3b82f6" },
+                2: { name: "Tabung 2", tabungName: "tabung2", color: "#10b981" },
+                3: { name: "Tabung 3", tabungName: "tabung3", color: "#f59e0b" },
+                4: { name: "Tabung 4", tabungName: "tabung4", color: "#ef4444" },
+                5: { name: "Tabung 5", tabungName: "tabung5", color: "#8b5cf6" },
+                6: { name: "Tabung 6", tabungName: "tabung6", color: "#ec4899" }
+            },
+            box: {
+                1: { name: "Box 1", basePath: "box1", color: "#06b6d4" },
+                2: { name: "Box 2", basePath: "box2", color: "#84cc16" },
+                3: { name: "Box 3", basePath: "box3", color: "#f97316" },
+                4: { name: "Box 4", basePath: "box4", color: "#dc2626" },
+                5: { name: "Box 5", basePath: "box5", color: "#7c3aed" },
+                6: { name: "Box 6", basePath: "box6", color: "#db2777" }
+            },
+            init: {
+                1: { name: "Kondisi Awal", basePath: "init1", color: "#6366f1" }
+            }
         };
         
-        const sensorLogs = {};
+        let currentSensorType = 'tabung';
+        let currentSensorNum = 2;  // Default to Tabung 2 (yang aktif)
+        let filteredData = [];
+        let chart = null;
         
-        function addLog(sensorKey, message) {
-            if (!sensorLogs[sensorKey]) sensorLogs[sensorKey] = [];
-            
-            const now = new Date().toLocaleTimeString('id-ID');
-            sensorLogs[sensorKey].unshift(`[${now}] ${message}`);
-            
-            if (sensorLogs[sensorKey].length > 8) {
-                sensorLogs[sensorKey].length = 8;
-            }
-            
-            const logEl = document.getElementById(`log_${sensorKey}`);
-            if (logEl) {
-                logEl.innerHTML = sensorLogs[sensorKey]
-                    .map(log => `<div class="log-entry">${log}</div>`)
-                    .join('');
-            }
-        }
-        
-        // Generate Tabung status cards
-        function generateTabungStatusCards() {
-            const grid = document.getElementById('tabungStatusGrid');
+        // Generate sensor selection grid
+        function generateSensorGrid(type) {
+            const grid = document.getElementById('sensorSelectGrid');
             let html = '';
             
-            for (let i = 1; i <= 6; i++) {
-                const config = sensorConfig[`tabung${i}`];
+            const config = sensorConfig[type];
+            const count = Object.keys(config).length;
+            
+            for (let i = 1; i <= count; i++) {
+                const sensor = config[i];
+                const isActive = currentSensorNum === i ? 'active' : '';
+                const icon = type === 'tabung' ? '🧪' : type === 'box' ? '📦' : '🎯';
+                
                 html += `
-                <div class="sensor-card tabung-card">
-                    <div class="sensor-header">
-                        <div>
-                            <div class="sensor-name">🧪 Tabung ${i}</div>
-                            <div class="sensor-id">Path: ${config.tabungName}/P1 & P2</div>
-                        </div>
-                        <span class="status-badge status-offline" id="status_tabung${i}">
-                            <span class="health-dot health-bad"></span>
-                            Connecting...
-                        </span>
-                    </div>
-                    
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">P1 Value</div>
-                            <div class="info-value" id="value_tabung${i}_p1">-- ppm</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">P2 Value</div>
-                            <div class="info-value" id="value_tabung${i}_p2">-- ppm</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Last Update</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="lastUpdate_tabung${i}">--</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Data Age</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="dataAge_tabung${i}">--</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-row">
-                        <div class="stat-item">
-                            <div class="stat-label">24h Readings</div>
-                            <div class="stat-value" id="readings_tabung${i}">--</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">24h Avg</div>
-                            <div class="stat-value" id="avgPpm_tabung${i}">-- ppm</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Device Status</div>
-                            <div class="stat-value" id="deviceStatus_tabung${i}">--</div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-section">
-                        <div class="control-title">Remote Control (P1 & P2)</div>
-                        <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlTabung(${i}, true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlTabung(${i}, false)">❌ Disable</button>
-                        </div>
-                    </div>
-                    
-                    <div class="log-section">
-                        <div class="log-title">Activity Log</div>
-                        <div id="log_tabung${i}">
-                            <div class="log-entry">Waiting for data...</div>
-                        </div>
+                <div class="sensor-select-item ${isActive}" onclick="selectSensor(${i})">
+                    <div class="sensor-select-title">${icon} ${sensor.name}</div>
+                    <div class="sensor-select-subtitle">
+                        ${type === 'tabung' ? 'P1 + P2' : 'Single Sensor'}
                     </div>
                 </div>`;
             }
@@ -436,476 +478,365 @@
             grid.innerHTML = html;
         }
         
-        // Generate Box status cards
-        function generateBoxStatusCards() {
-            const grid = document.getElementById('boxStatusGrid');
-            let html = '';
+        function selectSensorType(type) {
+            currentSensorType = type;
+            currentSensorNum = type === 'tabung' ? 2 : 1;  // Default tabung2
             
-            for (let i = 1; i <= 6; i++) {
-                const config = sensorConfig[`box${i}`];
-                html += `
-                <div class="sensor-card box-card">
-                    <div class="sensor-header">
-                        <div>
-                            <div class="sensor-name">📦 Box ${i}</div>
-                            <div class="sensor-id">Path: ${config.basePath}/latest</div>
-                        </div>
-                        <span class="status-badge status-offline" id="status_box${i}">
-                            <span class="health-dot health-bad"></span>
-                            Connecting...
-                        </span>
-                    </div>
-                    
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">Current Value</div>
-                            <div class="info-value" id="value_box${i}">-- ppm</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Last Update</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="lastUpdate_box${i}">--</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Data Age</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="dataAge_box${i}">--</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Device Status</div>
-                            <div class="info-value" id="deviceStatus_box${i}">--</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-row">
-                        <div class="stat-item">
-                            <div class="stat-label">24h Readings</div>
-                            <div class="stat-value" id="readings_box${i}">--</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">24h Avg</div>
-                            <div class="stat-value" id="avgPpm_box${i}">-- ppm</div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-section">
-                        <div class="control-title">Remote Control</div>
-                        <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlBox(${i}, true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlBox(${i}, false)">❌ Disable</button>
-                        </div>
-                    </div>
-                    
-                    <div class="log-section">
-                        <div class="log-title">Activity Log</div>
-                        <div id="log_box${i}">
-                            <div class="log-entry">Waiting for data...</div>
-                        </div>
-                    </div>
-                </div>`;
+            // Update tabs
+            document.querySelectorAll('.type-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            generateSensorGrid(type);
+        }
+        
+        function selectSensor(num) {
+            currentSensorNum = num;
+            
+            // Update selection
+            document.querySelectorAll('.sensor-select-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.sensor-select-item').classList.add('active');
+        }
+        
+        function initChart() {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: 'CO2 (ppm)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time' },
+                            ticks: { maxTicksLimit: 15 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function setQuickDate(option) {
+            const today = new Date();
+            const startDate = new Date();
+            
+            switch(option) {
+                case 'today':
+                    break;
+                case 'yesterday':
+                    startDate.setDate(today.getDate() - 1);
+                    today.setDate(today.getDate() - 1);
+                    break;
+                case 'last7days':
+                    startDate.setDate(today.getDate() - 7);
+                    break;
+                case 'last30days':
+                    startDate.setDate(today.getDate() - 30);
+                    break;
+                case 'thismonth':
+                    startDate.setDate(1);
+                    break;
             }
             
-            grid.innerHTML = html;
+            document.getElementById('startDate').valueAsDate = startDate;
+            document.getElementById('endDate').valueAsDate = today;
+            
+            loadHistoricalData();
         }
         
-        // Generate Init status card
-        function generateInitStatusCard() {
-            const grid = document.getElementById('initStatusGrid');
-            const config = sensorConfig.init1;
+        function resetDates() {
+            const today = new Date();
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
             
-            grid.innerHTML = `
-                <div class="sensor-card init-card">
-                    <div class="sensor-header">
-                        <div>
-                            <div class="sensor-name">🎯 Kondisi Awal</div>
-                            <div class="sensor-id">Path: ${config.basePath}/latest</div>
-                        </div>
-                        <span class="status-badge status-offline" id="status_init1">
-                            <span class="health-dot health-bad"></span>
-                            Connecting...
-                        </span>
-                    </div>
-                    
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">Current Value</div>
-                            <div class="info-value" id="value_init1">-- ppm</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Last Update</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="lastUpdate_init1">--</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Data Age</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="dataAge_init1">--</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Device Status</div>
-                            <div class="info-value" id="deviceStatus_init1">--</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stats-row">
-                        <div class="stat-item">
-                            <div class="stat-label">24h Readings</div>
-                            <div class="stat-value" id="readings_init1">--</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">24h Avg</div>
-                            <div class="stat-value" id="avgPpm_init1">-- ppm</div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-section">
-                        <div class="control-title">Remote Control</div>
-                        <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlInit(true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlInit(false)">❌ Disable</button>
-                        </div>
-                    </div>
-                    
-                    <div class="log-section">
-                        <div class="log-title">Activity Log</div>
-                        <div id="log_init1">
-                            <div class="log-entry">Waiting for data...</div>
-                        </div>
-                    </div>
-                </div>`;
+            document.getElementById('endDate').valueAsDate = today;
+            document.getElementById('startDate').valueAsDate = lastWeek;
+            
+            document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('chartContainer').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
         }
         
-        // ========================================
-        // SETUP TABUNG - PATH: tabungX/P1/latest
-        // ========================================
-        function setupTabungSensor(tabungNum) {
-            const config = sensorConfig[`tabung${tabungNum}`];
-            const tabungName = config.tabungName;
-            const sensorKey = `tabung${tabungNum}`;
+        async function loadHistoricalData() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
             
-            // Path P1 dan P2 sesuai Arduino
-            const p1Path = `${tabungName}/P1/latest`;
-            const p2Path = `${tabungName}/P2/latest`;
+            if (!startDateInput || !endDateInput) {
+                alert('Please select both start and end dates');
+                return;
+            }
             
-            console.log(`Setting up ${sensorKey}: P1=${p1Path}, P2=${p2Path}`);
+            const startDate = new Date(startDateInput);
+            startDate.setHours(0, 0, 0, 0);
             
-            // Listen P1
-            database.ref(p1Path).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.co2 || data.value || 0);
-                    const timestamp = data.timestamp || data.ts || Date.now();
-                    const age = Math.round((Date.now() - timestamp) / 1000);
-                    const date = new Date(timestamp);
-                    
-                    document.getElementById(`value_${sensorKey}_p1`).textContent = `${ppm} ppm`;
-                    document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
-                    document.getElementById(`dataAge_${sensorKey}`).textContent = age < 60 ? `${age}s ago` : `${Math.floor(age/60)}m ago`;
-                    
-                    updateSensorStatus(sensorKey, age);
-                    addLog(sensorKey, `P1 data: ${ppm} ppm`);
-                }
-            });
+            const endDate = new Date(endDateInput);
+            endDate.setHours(23, 59, 59, 999);
             
-            // Listen P2
-            database.ref(p2Path).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.co2 || data.value || 0);
-                    document.getElementById(`value_${sensorKey}_p2`).textContent = `${ppm} ppm`;
-                    addLog(sensorKey, `P2 data: ${ppm} ppm`);
-                }
-            });
+            const startTimestamp = startDate.getTime();
+            const endTimestamp = endDate.getTime();
             
-            // Listen control status P1
-            const controlPath = `control/${tabungName}/P1/enabled`;
-            database.ref(controlPath).on('value', (snapshot) => {
-                const enabled = snapshot.val();
-                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
-                if (enabled !== null) {
-                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
-                    addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
-                }
-            });
+            const config = sensorConfig[currentSensorType][currentSensorNum];
             
-            // Load 24h stats
-            load24hStatsTabung(sensorKey, tabungName);
-        }
-        
-        // ========================================
-        // SETUP BOX - PATH: boxX/latest
-        // ========================================
-        function setupBoxSensor(boxNum) {
-            const config = sensorConfig[`box${boxNum}`];
-            const basePath = config.basePath;
-            const sensorKey = `box${boxNum}`;
-            const latestPath = `${basePath}/latest`;
+            document.getElementById('chartInfo').textContent = 'Loading data...';
+            document.getElementById('chartContainer').style.display = 'block';
+            document.getElementById('chartTitle').textContent = `📈 ${config.name} CO2 Trend`;
             
-            console.log(`Setting up ${sensorKey}: ${latestPath}`);
+            filteredData = [];
             
-            database.ref(latestPath).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.co2 || data.value || 0);
-                    const timestamp = data.timestamp || data.ts || Date.now();
-                    const age = Math.round((Date.now() - timestamp) / 1000);
-                    const date = new Date(timestamp);
-                    
-                    document.getElementById(`value_${sensorKey}`).textContent = `${ppm} ppm`;
-                    document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
-                    document.getElementById(`dataAge_${sensorKey}`).textContent = age < 60 ? `${age}s ago` : `${Math.floor(age/60)}m ago`;
-                    
-                    updateSensorStatus(sensorKey, age);
-                    addLog(sensorKey, `Data: ${ppm} ppm`);
-                }
-            });
-            
-            // Control status
-            const controlPath = `control/${basePath}/enabled`;
-            database.ref(controlPath).on('value', (snapshot) => {
-                const enabled = snapshot.val();
-                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
-                if (enabled !== null) {
-                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
-                    addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
-                }
-            });
-            
-            load24hStatsBox(sensorKey, basePath);
-        }
-        
-        // ========================================
-        // SETUP INIT - PATH: init1/latest
-        // ========================================
-        function setupInitSensor() {
-            const config = sensorConfig.init1;
-            const basePath = config.basePath;
-            const sensorKey = 'init1';
-            const latestPath = `${basePath}/latest`;
-            
-            console.log(`Setting up ${sensorKey}: ${latestPath}`);
-            
-            database.ref(latestPath).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.co2 || data.value || 0);
-                    const timestamp = data.timestamp || data.ts || Date.now();
-                    const age = Math.round((Date.now() - timestamp) / 1000);
-                    const date = new Date(timestamp);
-                    
-                    document.getElementById(`value_${sensorKey}`).textContent = `${ppm} ppm`;
-                    document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
-                    document.getElementById(`dataAge_${sensorKey}`).textContent = age < 60 ? `${age}s ago` : `${Math.floor(age/60)}m ago`;
-                    
-                    updateSensorStatus(sensorKey, age);
-                    addLog(sensorKey, `Data: ${ppm} ppm`);
-                }
-            });
-            
-            // Control status
-            const controlPath = `control/${basePath}/enabled`;
-            database.ref(controlPath).on('value', (snapshot) => {
-                const enabled = snapshot.val();
-                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
-                if (enabled !== null) {
-                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
-                    addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
-                }
-            });
-            
-            load24hStatsInit(sensorKey, basePath);
-        }
-        
-        function updateSensorStatus(sensorKey, age) {
-            const statusEl = document.getElementById(`status_${sensorKey}`);
-            
-            if (age < 120) {  // Online if < 2 minutes
-                statusEl.innerHTML = '<span class="health-dot health-good"></span> Online';
-                statusEl.className = 'status-badge status-online';
-            } else if (age < 300) {  // Warning if < 5 minutes
-                statusEl.innerHTML = '<span class="health-dot health-bad"></span> Delayed';
-                statusEl.className = 'status-badge status-warning';
+            if (currentSensorType === 'tabung') {
+                // Load P1 and P2 data - PATH SESUAI ARDUINO
+                const tabungName = config.tabungName;
+                const p1Path = `${tabungName}/P1/history`;
+                const p2Path = `${tabungName}/P2/history`;
+                
+                console.log(`Loading history from: ${p1Path} and ${p2Path}`);
+                
+                const [p1Data, p2Data] = await Promise.all([
+                    loadSensorHistory(p1Path, startTimestamp, endTimestamp),
+                    loadSensorHistory(p2Path, startTimestamp, endTimestamp)
+                ]);
+                
+                filteredData = { p1: p1Data, p2: p2Data };
+                updateChartTabung(config);
             } else {
-                statusEl.innerHTML = '<span class="health-dot health-bad"></span> Offline';
-                statusEl.className = 'status-badge status-offline';
+                // Load single sensor data
+                const basePath = config.basePath;
+                const historyPath = `${basePath}/history`;
+                
+                console.log(`Loading history from: ${historyPath}`);
+                
+                const data = await loadSensorHistory(historyPath, startTimestamp, endTimestamp);
+                filteredData = data;
+                updateChartSingle(config);
             }
         }
         
-        // Load 24h stats for Tabung
-        function load24hStatsTabung(sensorKey, tabungName) {
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            const historyPath = `${tabungName}/P1/history`;
-            
-            database.ref(historyPath)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    let count = 0;
-                    let sum = 0;
+        function loadSensorHistory(historyPath, startTimestamp, endTimestamp) {
+            return new Promise((resolve) => {
+                database.ref(historyPath).once('value', (snapshot) => {
+                    const data = [];
                     
                     snapshot.forEach((child) => {
-                        const data = child.val();
-                        const co2 = data.co2 || data.value;
-                        const timestamp = data.ts || data.timestamp;
+                        const d = child.val();
+                        const co2 = d.co2 || d.value;
+                        const timestamp = d.ts || d.timestamp;
                         
-                        if (data && co2 && timestamp >= cutoff) {
-                            count++;
-                            sum += co2;
+                        if (d && co2 && timestamp >= startTimestamp && timestamp <= endTimestamp) {
+                            data.push({
+                                timestamp: timestamp,
+                                value: co2
+                            });
                         }
                     });
                     
-                    document.getElementById(`readings_${sensorKey}`).textContent = count;
-                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
-                    
-                    addLog(sensorKey, `24h stats: ${count} readings`);
-                });
-        }
-        
-        // Load 24h stats for Box
-        function load24hStatsBox(sensorKey, basePath) {
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            const historyPath = `${basePath}/history`;
-            
-            database.ref(historyPath)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    let count = 0;
-                    let sum = 0;
-                    
-                    snapshot.forEach((child) => {
-                        const data = child.val();
-                        const co2 = data.co2 || data.value;
-                        const timestamp = data.ts || data.timestamp;
-                        
-                        if (data && co2 && timestamp >= cutoff) {
-                            count++;
-                            sum += co2;
-                        }
-                    });
-                    
-                    document.getElementById(`readings_${sensorKey}`).textContent = count;
-                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
-                    
-                    addLog(sensorKey, `24h stats: ${count} readings`);
-                });
-        }
-        
-        // Load 24h stats for Init
-        function load24hStatsInit(sensorKey, basePath) {
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            const historyPath = `${basePath}/history`;
-            
-            database.ref(historyPath)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    let count = 0;
-                    let sum = 0;
-                    
-                    snapshot.forEach((child) => {
-                        const data = child.val();
-                        const co2 = data.co2 || data.value;
-                        const timestamp = data.ts || data.timestamp;
-                        
-                        if (data && co2 && timestamp >= cutoff) {
-                            count++;
-                            sum += co2;
-                        }
-                    });
-                    
-                    document.getElementById(`readings_${sensorKey}`).textContent = count;
-                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
-                    
-                    addLog(sensorKey, `24h stats: ${count} readings`);
-                });
-        }
-        
-        // Control functions - SESUAI PATH ARDUINO
-        function controlTabung(tabungNum, enable) {
-            const config = sensorConfig[`tabung${tabungNum}`];
-            const tabungName = config.tabungName;
-            const sensorKey = `tabung${tabungNum}`;
-            
-            // Control path sesuai Arduino: control/tabung2/P1/enabled
-            const controlPathP1 = `control/${tabungName}/P1/enabled`;
-            const controlPathP2 = `control/${tabungName}/P2/enabled`;
-            
-            Promise.all([
-                database.ref(controlPathP1).set(enable),
-                database.ref(controlPathP2).set(enable)
-            ])
-            .then(() => {
-                addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'} both P1 & P2`);
-                alert(`Tabung ${tabungNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
-            })
-            .catch((error) => {
-                addLog(sensorKey, `Control failed: ${error.message}`);
-                alert(`Failed: ${error.message}`);
+                    data.sort((a, b) => a.timestamp - b.timestamp);
+                    console.log(`Loaded ${data.length} data points from ${historyPath}`);
+                    resolve(data);
+                }).catch(() => resolve([]));
             });
         }
         
-        function controlBox(boxNum, enable) {
-            const config = sensorConfig[`box${boxNum}`];
-            const basePath = config.basePath;
-            const sensorKey = `box${boxNum}`;
-            const controlPath = `control/${basePath}/enabled`;
+        function updateChartTabung(config) {
+            if (!chart) initChart();
             
-            database.ref(controlPath).set(enable)
-                .then(() => {
-                    addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
-                    alert(`Box ${boxNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
-                })
-                .catch((error) => {
-                    addLog(sensorKey, `Control failed: ${error.message}`);
-                    alert(`Failed: ${error.message}`);
+            const p1Data = filteredData.p1 || [];
+            const p2Data = filteredData.p2 || [];
+            
+            if (p1Data.length === 0 && p2Data.length === 0) {
+                document.getElementById('chartInfo').textContent = 'No data found for selected date range';
+                document.getElementById('statsContainer').style.display = 'none';
+                document.getElementById('downloadBtn').style.display = 'none';
+                return;
+            }
+            
+            // Create labels from combined timestamps
+            const allTimestamps = new Set();
+            p1Data.forEach(d => allTimestamps.add(d.timestamp));
+            p2Data.forEach(d => allTimestamps.add(d.timestamp));
+            
+            const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+            
+            const labels = sortedTimestamps.map(ts => {
+                const date = new Date(ts);
+                return date.toLocaleString('id-ID', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                 });
+            });
+            
+            const datasets = [];
+            
+            if (p1Data.length > 0) {
+                datasets.push({
+                    label: `${config.name} - P1`,
+                    data: p1Data.map(d => Math.round(d.value)),
+                    borderColor: config.color,
+                    backgroundColor: config.color + '20',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4
+                });
+            }
+            
+            if (p2Data.length > 0) {
+                const p2Color = adjustColor(config.color, 40);
+                datasets.push({
+                    label: `${config.name} - P2`,
+                    data: p2Data.map(d => Math.round(d.value)),
+                    borderColor: p2Color,
+                    backgroundColor: p2Color + '20',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4
+                });
+            }
+            
+            chart.data.labels = p1Data.length > 0 
+                ? p1Data.map(d => formatDate(d.timestamp))
+                : p2Data.map(d => formatDate(d.timestamp));
+            chart.data.datasets = datasets;
+            chart.update();
+            
+            // Calculate stats from combined data
+            const allValues = [...p1Data.map(d => d.value), ...p2Data.map(d => d.value)];
+            updateStatistics(allValues);
+            
+            document.getElementById('chartInfo').textContent = 
+                `Showing P1: ${p1Data.length} points, P2: ${p2Data.length} points`;
+            document.getElementById('downloadBtn').style.display = 'block';
+            document.getElementById('statsContainer').style.display = 'grid';
         }
         
-        function controlInit(enable) {
-            const config = sensorConfig.init1;
-            const basePath = config.basePath;
-            const sensorKey = 'init1';
-            const controlPath = `control/${basePath}/enabled`;
+        function updateChartSingle(config) {
+            if (!chart) initChart();
             
-            database.ref(controlPath).set(enable)
-                .then(() => {
-                    addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
-                    alert(`Init ${enable ? 'enabled' : 'disabled'} successfully!`);
-                })
-                .catch((error) => {
-                    addLog(sensorKey, `Control failed: ${error.message}`);
-                    alert(`Failed: ${error.message}`);
+            if (filteredData.length === 0) {
+                document.getElementById('chartInfo').textContent = 'No data found for selected date range';
+                document.getElementById('statsContainer').style.display = 'none';
+                document.getElementById('downloadBtn').style.display = 'none';
+                return;
+            }
+            
+            const labels = filteredData.map(d => formatDate(d.timestamp));
+            const values = filteredData.map(d => Math.round(d.value));
+            
+            chart.data.labels = labels;
+            chart.data.datasets = [{
+                label: config.name,
+                data: values,
+                borderColor: config.color,
+                backgroundColor: config.color + '20',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }];
+            chart.update();
+            
+            updateStatistics(filteredData.map(d => d.value));
+            
+            document.getElementById('chartInfo').textContent = 
+                `Showing ${filteredData.length} data points`;
+            document.getElementById('downloadBtn').style.display = 'block';
+            document.getElementById('statsContainer').style.display = 'grid';
+        }
+        
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('id-ID', {
+                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+        }
+        
+        function adjustColor(hex, amount) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            const r = Math.min(255, ((num >> 16) & 0xff) + amount);
+            const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+            const b = Math.min(255, (num & 0xff) + amount);
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+        
+        function updateStatistics(values) {
+            if (values.length === 0) return;
+            
+            const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+            const max = Math.max(...values);
+            const min = Math.min(...values);
+            
+            document.getElementById('avgValue').textContent = Math.round(avg);
+            document.getElementById('maxValue').textContent = Math.round(max);
+            document.getElementById('minValue').textContent = Math.round(min);
+            document.getElementById('dataCount').textContent = values.length;
+        }
+        
+        function downloadCSV() {
+            const config = sensorConfig[currentSensorType][currentSensorNum];
+            let csv = '';
+            
+            if (currentSensorType === 'tabung') {
+                csv = 'Sensor,Point,Timestamp,DateTime,CO2 (ppm)\n';
+                
+                if (filteredData.p1) {
+                    filteredData.p1.forEach(d => {
+                        const date = new Date(d.timestamp);
+                        csv += `${config.name},P1,${d.timestamp},${date.toLocaleString('id-ID')},${Math.round(d.value)}\n`;
+                    });
+                }
+                
+                if (filteredData.p2) {
+                    filteredData.p2.forEach(d => {
+                        const date = new Date(d.timestamp);
+                        csv += `${config.name},P2,${d.timestamp},${date.toLocaleString('id-ID')},${Math.round(d.value)}\n`;
+                    });
+                }
+            } else {
+                csv = 'Sensor,Timestamp,DateTime,CO2 (ppm)\n';
+                
+                filteredData.forEach(d => {
+                    const date = new Date(d.timestamp);
+                    csv += `${config.name},${d.timestamp},${date.toLocaleString('id-ID')},${Math.round(d.value)}\n`;
                 });
+            }
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            a.href = url;
+            a.download = `CO2_${currentSensorType}${currentSensorNum}_${startDate}_to_${endDate}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
         }
         
         // Initialize
         function init() {
-            console.log('Initializing Sensor Status page...');
+            console.log('Initializing Historical Data page...');
             console.log('Firebase paths:');
-            console.log('- Tabung: tabungX/P1/latest, tabungX/P2/latest');
-            console.log('- Box: boxX/latest');
-            console.log('- Init: init1/latest');
-            console.log('- Control: control/tabungX/P1/enabled, control/tabungX/P2/enabled');
+            console.log('- Tabung: tabungX/P1/history, tabungX/P2/history');
+            console.log('- Box: boxX/history');
+            console.log('- Init: init1/history');
             
-            generateTabungStatusCards();
-            generateBoxStatusCards();
-            generateInitStatusCard();
+            const today = new Date();
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
             
-            for (let i = 1; i <= 6; i++) {
-                setupTabungSensor(i);
-                setupBoxSensor(i);
-            }
-            setupInitSensor();
+            document.getElementById('endDate').valueAsDate = today;
+            document.getElementById('startDate').valueAsDate = lastWeek;
+            
+            generateSensorGrid('tabung');
+            initChart();
         }
-        
-        // Auto-refresh stats every 5 minutes
-        setInterval(() => {
-            for (let i = 1; i <= 6; i++) {
-                const tabungConfig = sensorConfig[`tabung${i}`];
-                load24hStatsTabung(`tabung${i}`, tabungConfig.tabungName);
-                
-                const boxConfig = sensorConfig[`box${i}`];
-                load24hStatsBox(`box${i}`, boxConfig.basePath);
-            }
-            load24hStatsInit('init1', sensorConfig.init1.basePath);
-        }, 5 * 60 * 1000);
         
         init();
     </script>
