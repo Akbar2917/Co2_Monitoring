@@ -316,36 +316,33 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        // Sensor Configuration
-        const sensorConfig = {
-            tabung1: { p1: "ESP32_T1_P1", p2: "ESP32_T1_P2" },
-            tabung2: { p1: "ESP32_T2_P1", p2: "ESP32_T2_P2" },
-            tabung3: { p1: "ESP32_T3_P1", p2: "ESP32_T3_P2" },
-            tabung4: { p1: "ESP32_T4_P1", p2: "ESP32_T4_P2" },
-            tabung5: { p1: "ESP32_T5_P1", p2: "ESP32_T5_P2" },
-            tabung6: { p1: "ESP32_T6_P1", p2: "ESP32_T6_P2" },
-            box1: "ESP32_B1",
-            box2: "ESP32_B2",
-            box3: "ESP32_B3",
-            box4: "ESP32_B4",
-            box5: "ESP32_B5",
-            box6: "ESP32_B6",
-            init1: "ESP32_INIT"
-        };
+        // ========================================
+        // SENSOR CONFIGURATION - SESUAI ARDUINO
+        // ========================================
+        // Arduino path: tabung2/P1/latest, tabung2/P2/latest
+        // Control path: control/tabung2/P1/enabled, control/tabung2/P2/enabled
+        // ========================================
         
-        // Fallback devices
-        const fallbackDevices = {
-            "ESP32_T1_P1": "ESP32_01",
-            "ESP32_T1_P2": "ESP32_02",
-            "ESP32_B1": "ESP32_03",
-            "ESP32_INIT": "ESP32_04"
+        const sensorConfig = {
+            // Tabung 1-6 - path: tabungX/P1 dan tabungX/P2
+            tabung1: { tabungName: "tabung1" },
+            tabung2: { tabungName: "tabung2" },  // INI YANG AKTIF
+            tabung3: { tabungName: "tabung3" },
+            tabung4: { tabungName: "tabung4" },
+            tabung5: { tabungName: "tabung5" },
+            tabung6: { tabungName: "tabung6" },
+            // Box 1-6 - path: boxX/latest
+            box1: { basePath: "box1" },
+            box2: { basePath: "box2" },
+            box3: { basePath: "box3" },
+            box4: { basePath: "box4" },
+            box5: { basePath: "box5" },
+            box6: { basePath: "box6" },
+            // Init - path: init1/latest
+            init1: { basePath: "init1" }
         };
         
         const sensorLogs = {};
-        
-        function getDeviceID(configID) {
-            return fallbackDevices[configID] || configID;
-        }
         
         function addLog(sensorKey, message) {
             if (!sensorLogs[sensorKey]) sensorLogs[sensorKey] = [];
@@ -371,12 +368,13 @@
             let html = '';
             
             for (let i = 1; i <= 6; i++) {
+                const config = sensorConfig[`tabung${i}`];
                 html += `
                 <div class="sensor-card tabung-card">
                     <div class="sensor-header">
                         <div>
                             <div class="sensor-name">🧪 Tabung ${i}</div>
-                            <div class="sensor-id">P1: ${sensorConfig[`tabung${i}`].p1} | P2: ${sensorConfig[`tabung${i}`].p2}</div>
+                            <div class="sensor-id">Path: ${config.tabungName}/P1 & P2</div>
                         </div>
                         <span class="status-badge status-offline" id="status_tabung${i}">
                             <span class="health-dot health-bad"></span>
@@ -409,16 +407,20 @@
                             <div class="stat-value" id="readings_tabung${i}">--</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Avg PPM</div>
-                            <div class="stat-value" id="avgPpm_tabung${i}">--</div>
+                            <div class="stat-label">24h Avg</div>
+                            <div class="stat-value" id="avgPpm_tabung${i}">-- ppm</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Device Status</div>
+                            <div class="stat-value" id="deviceStatus_tabung${i}">--</div>
                         </div>
                     </div>
                     
                     <div class="control-section">
-                        <div class="control-title">Remote Control</div>
+                        <div class="control-title">Remote Control (P1 & P2)</div>
                         <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlSensor('tabung${i}', true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlSensor('tabung${i}', false)">❌ Disable</button>
+                            <button class="btn btn-enable" onclick="controlTabung(${i}, true)">✅ Enable</button>
+                            <button class="btn btn-disable" onclick="controlTabung(${i}, false)">❌ Disable</button>
                         </div>
                     </div>
                     
@@ -440,12 +442,13 @@
             let html = '';
             
             for (let i = 1; i <= 6; i++) {
+                const config = sensorConfig[`box${i}`];
                 html += `
                 <div class="sensor-card box-card">
                     <div class="sensor-header">
                         <div>
                             <div class="sensor-name">📦 Box ${i}</div>
-                            <div class="sensor-id">${sensorConfig[`box${i}`]}</div>
+                            <div class="sensor-id">Path: ${config.basePath}/latest</div>
                         </div>
                         <span class="status-badge status-offline" id="status_box${i}">
                             <span class="health-dot health-bad"></span>
@@ -468,7 +471,7 @@
                         </div>
                         <div class="info-item">
                             <div class="info-label">Device Status</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="deviceStatus_box${i}">--</div>
+                            <div class="info-value" id="deviceStatus_box${i}">--</div>
                         </div>
                     </div>
                     
@@ -478,16 +481,16 @@
                             <div class="stat-value" id="readings_box${i}">--</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Avg PPM</div>
-                            <div class="stat-value" id="avgPpm_box${i}">--</div>
+                            <div class="stat-label">24h Avg</div>
+                            <div class="stat-value" id="avgPpm_box${i}">-- ppm</div>
                         </div>
                     </div>
                     
                     <div class="control-section">
                         <div class="control-title">Remote Control</div>
                         <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlSensor('box${i}', true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlSensor('box${i}', false)">❌ Disable</button>
+                            <button class="btn btn-enable" onclick="controlBox(${i}, true)">✅ Enable</button>
+                            <button class="btn btn-disable" onclick="controlBox(${i}, false)">❌ Disable</button>
                         </div>
                     </div>
                     
@@ -506,12 +509,14 @@
         // Generate Init status card
         function generateInitStatusCard() {
             const grid = document.getElementById('initStatusGrid');
+            const config = sensorConfig.init1;
+            
             grid.innerHTML = `
                 <div class="sensor-card init-card">
                     <div class="sensor-header">
                         <div>
                             <div class="sensor-name">🎯 Kondisi Awal</div>
-                            <div class="sensor-id">${sensorConfig.init1}</div>
+                            <div class="sensor-id">Path: ${config.basePath}/latest</div>
                         </div>
                         <span class="status-badge status-offline" id="status_init1">
                             <span class="health-dot health-bad"></span>
@@ -534,7 +539,7 @@
                         </div>
                         <div class="info-item">
                             <div class="info-label">Device Status</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="deviceStatus_init1">--</div>
+                            <div class="info-value" id="deviceStatus_init1">--</div>
                         </div>
                     </div>
                     
@@ -544,16 +549,16 @@
                             <div class="stat-value" id="readings_init1">--</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-label">Avg PPM</div>
-                            <div class="stat-value" id="avgPpm_init1">--</div>
+                            <div class="stat-label">24h Avg</div>
+                            <div class="stat-value" id="avgPpm_init1">-- ppm</div>
                         </div>
                     </div>
                     
                     <div class="control-section">
                         <div class="control-title">Remote Control</div>
                         <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlSensor('init1', true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlSensor('init1', false)">❌ Disable</button>
+                            <button class="btn btn-enable" onclick="controlInit(true)">✅ Enable</button>
+                            <button class="btn btn-disable" onclick="controlInit(false)">❌ Disable</button>
                         </div>
                     </div>
                     
@@ -566,19 +571,28 @@
                 </div>`;
         }
         
-        // Setup Tabung sensor monitoring
+        // ========================================
+        // SETUP TABUNG - PATH: tabungX/P1/latest
+        // ========================================
         function setupTabungSensor(tabungNum) {
-            const p1ID = getDeviceID(sensorConfig[`tabung${tabungNum}`].p1);
-            const p2ID = getDeviceID(sensorConfig[`tabung${tabungNum}`].p2);
+            const config = sensorConfig[`tabung${tabungNum}`];
+            const tabungName = config.tabungName;
             const sensorKey = `tabung${tabungNum}`;
             
+            // Path P1 dan P2 sesuai Arduino
+            const p1Path = `${tabungName}/P1/latest`;
+            const p2Path = `${tabungName}/P2/latest`;
+            
+            console.log(`Setting up ${sensorKey}: P1=${p1Path}, P2=${p2Path}`);
+            
             // Listen P1
-            database.ref(`sensors/${p1ID}/latest`).on('value', (snapshot) => {
+            database.ref(p1Path).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
-                    const date = new Date(data.timestamp);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
+                    const date = new Date(timestamp);
                     
                     document.getElementById(`value_${sensorKey}_p1`).textContent = `${ppm} ppm`;
                     document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
@@ -590,7 +604,7 @@
             });
             
             // Listen P2
-            database.ref(`sensors/${p2ID}/latest`).on('value', (snapshot) => {
+            database.ref(p2Path).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
@@ -599,21 +613,39 @@
                 }
             });
             
+            // Listen control status P1
+            const controlPath = `control/${tabungName}/P1/enabled`;
+            database.ref(controlPath).on('value', (snapshot) => {
+                const enabled = snapshot.val();
+                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
+                if (enabled !== null) {
+                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
+                    addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
+                }
+            });
+            
             // Load 24h stats
-            load24hStats(sensorKey, p1ID);
+            load24hStatsTabung(sensorKey, tabungName);
         }
         
-        // Setup Box sensor monitoring
+        // ========================================
+        // SETUP BOX - PATH: boxX/latest
+        // ========================================
         function setupBoxSensor(boxNum) {
-            const deviceID = getDeviceID(sensorConfig[`box${boxNum}`]);
+            const config = sensorConfig[`box${boxNum}`];
+            const basePath = config.basePath;
             const sensorKey = `box${boxNum}`;
+            const latestPath = `${basePath}/latest`;
             
-            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            console.log(`Setting up ${sensorKey}: ${latestPath}`);
+            
+            database.ref(latestPath).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
-                    const date = new Date(data.timestamp);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
+                    const date = new Date(timestamp);
                     
                     document.getElementById(`value_${sensorKey}`).textContent = `${ppm} ppm`;
                     document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
@@ -625,28 +657,37 @@
             });
             
             // Control status
-            database.ref(`control/${deviceID}/enabled`).on('value', (snapshot) => {
+            const controlPath = `control/${basePath}/enabled`;
+            database.ref(controlPath).on('value', (snapshot) => {
                 const enabled = snapshot.val();
-                document.getElementById(`deviceStatus_${sensorKey}`).textContent = enabled ? '✅ Enabled' : '❌ Disabled';
+                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
                 if (enabled !== null) {
+                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
                     addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
                 }
             });
             
-            load24hStats(sensorKey, deviceID);
+            load24hStatsBox(sensorKey, basePath);
         }
         
-        // Setup Init sensor
+        // ========================================
+        // SETUP INIT - PATH: init1/latest
+        // ========================================
         function setupInitSensor() {
-            const deviceID = getDeviceID(sensorConfig.init1);
+            const config = sensorConfig.init1;
+            const basePath = config.basePath;
             const sensorKey = 'init1';
+            const latestPath = `${basePath}/latest`;
             
-            database.ref(`sensors/${deviceID}/latest`).on('value', (snapshot) => {
+            console.log(`Setting up ${sensorKey}: ${latestPath}`);
+            
+            database.ref(latestPath).on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const ppm = Math.round(data.co2 || data.value || 0);
-                    const age = Math.round((Date.now() - data.timestamp) / 1000);
-                    const date = new Date(data.timestamp);
+                    const timestamp = data.timestamp || data.ts || Date.now();
+                    const age = Math.round((Date.now() - timestamp) / 1000);
+                    const date = new Date(timestamp);
                     
                     document.getElementById(`value_${sensorKey}`).textContent = `${ppm} ppm`;
                     document.getElementById(`lastUpdate_${sensorKey}`).textContent = date.toLocaleTimeString('id-ID');
@@ -657,25 +698,27 @@
                 }
             });
             
-            database.ref(`control/${deviceID}/enabled`).on('value', (snapshot) => {
+            // Control status
+            const controlPath = `control/${basePath}/enabled`;
+            database.ref(controlPath).on('value', (snapshot) => {
                 const enabled = snapshot.val();
-                document.getElementById(`deviceStatus_${sensorKey}`).textContent = enabled ? '✅ Enabled' : '❌ Disabled';
+                const statusEl = document.getElementById(`deviceStatus_${sensorKey}`);
                 if (enabled !== null) {
+                    statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled';
                     addLog(sensorKey, `Device ${enabled ? 'enabled' : 'disabled'}`);
                 }
             });
             
-            load24hStats(sensorKey, deviceID);
+            load24hStatsInit(sensorKey, basePath);
         }
         
         function updateSensorStatus(sensorKey, age) {
             const statusEl = document.getElementById(`status_${sensorKey}`);
-            const healthDot = statusEl.querySelector('.health-dot');
             
-            if (age < 120) {
+            if (age < 120) {  // Online if < 2 minutes
                 statusEl.innerHTML = '<span class="health-dot health-good"></span> Online';
                 statusEl.className = 'status-badge status-online';
-            } else if (age < 300) {
+            } else if (age < 300) {  // Warning if < 5 minutes
                 statusEl.innerHTML = '<span class="health-dot health-bad"></span> Delayed';
                 statusEl.className = 'status-badge status-warning';
             } else {
@@ -684,10 +727,12 @@
             }
         }
         
-        function load24hStats(sensorKey, deviceID) {
+        // Load 24h stats for Tabung
+        function load24hStatsTabung(sensorKey, tabungName) {
             const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            const historyPath = `${tabungName}/P1/history`;
             
-            database.ref(`sensors/${deviceID}/history`)
+            database.ref(historyPath)
                 .limitToLast(1500)
                 .once('value')
                 .then((snapshot) => {
@@ -697,36 +742,132 @@
                     snapshot.forEach((child) => {
                         const data = child.val();
                         const co2 = data.co2 || data.value;
+                        const timestamp = data.ts || data.timestamp;
                         
-                        if (data && co2 && data.timestamp >= cutoff) {
+                        if (data && co2 && timestamp >= cutoff) {
                             count++;
                             sum += co2;
                         }
                     });
                     
                     document.getElementById(`readings_${sensorKey}`).textContent = count;
-                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? Math.round(sum / count) : '--';
+                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
                     
                     addLog(sensorKey, `24h stats: ${count} readings`);
                 });
         }
         
-        function controlSensor(sensorKey, enable) {
-            let deviceID;
+        // Load 24h stats for Box
+        function load24hStatsBox(sensorKey, basePath) {
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            const historyPath = `${basePath}/history`;
             
-            if (sensorKey.startsWith('tabung')) {
-                // For tabung, control P1 device
-                deviceID = getDeviceID(sensorConfig[sensorKey].p1);
-            } else if (sensorKey.startsWith('box')) {
-                deviceID = getDeviceID(sensorConfig[sensorKey]);
-            } else {
-                deviceID = getDeviceID(sensorConfig.init1);
-            }
+            database.ref(historyPath)
+                .limitToLast(1500)
+                .once('value')
+                .then((snapshot) => {
+                    let count = 0;
+                    let sum = 0;
+                    
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        const co2 = data.co2 || data.value;
+                        const timestamp = data.ts || data.timestamp;
+                        
+                        if (data && co2 && timestamp >= cutoff) {
+                            count++;
+                            sum += co2;
+                        }
+                    });
+                    
+                    document.getElementById(`readings_${sensorKey}`).textContent = count;
+                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
+                    
+                    addLog(sensorKey, `24h stats: ${count} readings`);
+                });
+        }
+        
+        // Load 24h stats for Init
+        function load24hStatsInit(sensorKey, basePath) {
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            const historyPath = `${basePath}/history`;
             
-            database.ref(`control/${deviceID}/enabled`).set(enable)
+            database.ref(historyPath)
+                .limitToLast(1500)
+                .once('value')
+                .then((snapshot) => {
+                    let count = 0;
+                    let sum = 0;
+                    
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        const co2 = data.co2 || data.value;
+                        const timestamp = data.ts || data.timestamp;
+                        
+                        if (data && co2 && timestamp >= cutoff) {
+                            count++;
+                            sum += co2;
+                        }
+                    });
+                    
+                    document.getElementById(`readings_${sensorKey}`).textContent = count;
+                    document.getElementById(`avgPpm_${sensorKey}`).textContent = count > 0 ? `${Math.round(sum / count)} ppm` : '-- ppm';
+                    
+                    addLog(sensorKey, `24h stats: ${count} readings`);
+                });
+        }
+        
+        // Control functions - SESUAI PATH ARDUINO
+        function controlTabung(tabungNum, enable) {
+            const config = sensorConfig[`tabung${tabungNum}`];
+            const tabungName = config.tabungName;
+            const sensorKey = `tabung${tabungNum}`;
+            
+            // Control path sesuai Arduino: control/tabung2/P1/enabled
+            const controlPathP1 = `control/${tabungName}/P1/enabled`;
+            const controlPathP2 = `control/${tabungName}/P2/enabled`;
+            
+            Promise.all([
+                database.ref(controlPathP1).set(enable),
+                database.ref(controlPathP2).set(enable)
+            ])
+            .then(() => {
+                addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'} both P1 & P2`);
+                alert(`Tabung ${tabungNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
+            })
+            .catch((error) => {
+                addLog(sensorKey, `Control failed: ${error.message}`);
+                alert(`Failed: ${error.message}`);
+            });
+        }
+        
+        function controlBox(boxNum, enable) {
+            const config = sensorConfig[`box${boxNum}`];
+            const basePath = config.basePath;
+            const sensorKey = `box${boxNum}`;
+            const controlPath = `control/${basePath}/enabled`;
+            
+            database.ref(controlPath).set(enable)
                 .then(() => {
                     addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
-                    alert(`${sensorKey} ${enable ? 'enabled' : 'disabled'} successfully!`);
+                    alert(`Box ${boxNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
+                })
+                .catch((error) => {
+                    addLog(sensorKey, `Control failed: ${error.message}`);
+                    alert(`Failed: ${error.message}`);
+                });
+        }
+        
+        function controlInit(enable) {
+            const config = sensorConfig.init1;
+            const basePath = config.basePath;
+            const sensorKey = 'init1';
+            const controlPath = `control/${basePath}/enabled`;
+            
+            database.ref(controlPath).set(enable)
+                .then(() => {
+                    addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
+                    alert(`Init ${enable ? 'enabled' : 'disabled'} successfully!`);
                 })
                 .catch((error) => {
                     addLog(sensorKey, `Control failed: ${error.message}`);
@@ -736,6 +877,13 @@
         
         // Initialize
         function init() {
+            console.log('Initializing Sensor Status page...');
+            console.log('Firebase paths:');
+            console.log('- Tabung: tabungX/P1/latest, tabungX/P2/latest');
+            console.log('- Box: boxX/latest');
+            console.log('- Init: init1/latest');
+            console.log('- Control: control/tabungX/P1/enabled, control/tabungX/P2/enabled');
+            
             generateTabungStatusCards();
             generateBoxStatusCards();
             generateInitStatusCard();
@@ -747,16 +895,16 @@
             setupInitSensor();
         }
         
-        // Auto-refresh stats
+        // Auto-refresh stats every 5 minutes
         setInterval(() => {
             for (let i = 1; i <= 6; i++) {
-                const p1ID = getDeviceID(sensorConfig[`tabung${i}`].p1);
-                load24hStats(`tabung${i}`, p1ID);
+                const tabungConfig = sensorConfig[`tabung${i}`];
+                load24hStatsTabung(`tabung${i}`, tabungConfig.tabungName);
                 
-                const boxID = getDeviceID(sensorConfig[`box${i}`]);
-                load24hStats(`box${i}`, boxID);
+                const boxConfig = sensorConfig[`box${i}`];
+                load24hStatsBox(`box${i}`, boxConfig.basePath);
             }
-            load24hStats('init1', getDeviceID(sensorConfig.init1));
+            load24hStatsInit('init1', sensorConfig.init1.basePath);
         }, 5 * 60 * 1000);
         
         init();
