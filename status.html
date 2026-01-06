@@ -249,6 +249,9 @@
         
         .init-card .sensor-header { border-bottom-color: #8b5cf6; }
         .init-card .sensor-name { color: #8b5cf6; }
+
+        .init2-card .sensor-header { border-bottom-color: #8b5cf6; }
+        .init2-card .sensor-name { color: #8b5cf6; }
         
         /* Init section - single column */
         .init-section {
@@ -280,7 +283,7 @@
         
         <div class="header">
             <h1>🔧 Sensor Status & Control</h1>
-            <p>Monitor and control all sensors (6 Tabung, 6 Box, 1 Init)</p>
+            <p>Monitor and control all sensors (6 Tabung, 6 Box, 2 Init)</p>
         </div>
         
         <!-- TABUNG SECTION -->
@@ -290,13 +293,13 @@
         </div>
         
         <!-- BOX SECTION -->
-        <div class="section-title">📦 Box Sensors (1-6)</div>
+        <div class="section-title">📦 Box Sensors (1-12)</div>
         <div class="sensor-grid" id="boxStatusGrid">
             <!-- Generated dynamically -->
         </div>
         
         <!-- INIT SECTION -->
-        <div class="section-title">🎯 Kondisi Awal</div>
+        <div class="section-title">🎯 Kondisi Awal 1-2</div>
         <div class="sensor-grid init-section" id="initStatusGrid">
             <!-- Generated dynamically -->
         </div>
@@ -331,15 +334,23 @@
             tabung4: { tabungName: "tabung4" },
             tabung5: { tabungName: "tabung5" },
             tabung6: { tabungName: "tabung6" },
-            // Box 1-6 - path: boxX/latest
+            // Box 1-12 - path: boxX/latest
             box1: { basePath: "box1" },
             box2: { basePath: "box2" },
             box3: { basePath: "box3" },
             box4: { basePath: "box4" },
             box5: { basePath: "box5" },
             box6: { basePath: "box6" },
+	    box7: { basePath: "box7" },
+            box8: { basePath: "box8" },
+            box9: { basePath: "box9" },
+            box10: { basePath: "box10" },
+            box11: { basePath: "box11" },
+            box12: { basePath: "box12" },
+
             // Init - path: init1/latest
-            init1: { basePath: "init1" }
+            init1: { basePath: "init1" },
+            init2: { basePath: "init2" }
         };
         
         const sensorLogs = {};
@@ -441,7 +452,7 @@
             const grid = document.getElementById('boxStatusGrid');
             let html = '';
             
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 const config = sensorConfig[`box${i}`];
                 html += `
                 <div class="sensor-card box-card">
@@ -509,16 +520,18 @@
         // Generate Init status card
         function generateInitStatusCard() {
             const grid = document.getElementById('initStatusGrid');
-            const config = sensorConfig.init1;
+            let html = '';
             
-            grid.innerHTML = `
+            for (let i = 1; i <= 2; i++) {
+                const config = sensorConfig[`init${i}`];
+                html += `
                 <div class="sensor-card init-card">
                     <div class="sensor-header">
                         <div>
-                            <div class="sensor-name">🎯 Kondisi Awal</div>
+                            <div class="sensor-name">📦 Init ${i}</div>
                             <div class="sensor-id">Path: ${config.basePath}/latest</div>
                         </div>
-                        <span class="status-badge status-offline" id="status_init1">
+                        <span class="status-badge status-offline" id="status_init${i}">
                             <span class="health-dot health-bad"></span>
                             Connecting...
                         </span>
@@ -527,48 +540,51 @@
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">Current Value</div>
-                            <div class="info-value" id="value_init1">-- ppm</div>
+                            <div class="info-value" id="value_init${i}">-- ppm</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Last Update</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="lastUpdate_init1">--</div>
+                            <div class="info-value" style="font-size: 0.9em;" id="lastUpdate_init${i}">--</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Data Age</div>
-                            <div class="info-value" style="font-size: 0.9em;" id="dataAge_init1">--</div>
+                            <div class="info-value" style="font-size: 0.9em;" id="dataAge_init${i}">--</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Device Status</div>
-                            <div class="info-value" id="deviceStatus_init1">--</div>
+                            <div class="info-value" id="deviceStatus_init${i}">--</div>
                         </div>
                     </div>
                     
                     <div class="stats-row">
                         <div class="stat-item">
                             <div class="stat-label">24h Readings</div>
-                            <div class="stat-value" id="readings_init1">--</div>
+                            <div class="stat-value" id="readings_init${i}">--</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-label">24h Avg</div>
-                            <div class="stat-value" id="avgPpm_init1">-- ppm</div>
+                            <div class="stat-value" id="avgPpm_init${i}">-- ppm</div>
                         </div>
                     </div>
                     
                     <div class="control-section">
                         <div class="control-title">Remote Control</div>
                         <div class="control-buttons">
-                            <button class="btn btn-enable" onclick="controlInit(true)">✅ Enable</button>
-                            <button class="btn btn-disable" onclick="controlInit(false)">❌ Disable</button>
+                            <button class="btn btn-enable" onclick="controlInit(${i}, true)">✅ Enable</button>
+                            <button class="btn btn-disable" onclick="controlInit(${i}, false)">❌ Disable</button>
                         </div>
                     </div>
                     
                     <div class="log-section">
                         <div class="log-title">Activity Log</div>
-                        <div id="log_init1">
+                        <div id="log_init${i}">
                             <div class="log-entry">Waiting for data...</div>
                         </div>
                     </div>
                 </div>`;
+            }
+            
+            grid.innerHTML = html;
         }
         
         // ========================================
@@ -673,10 +689,10 @@
         // ========================================
         // SETUP INIT - PATH: init1/latest
         // ========================================
-        function setupInitSensor() {
-            const config = sensorConfig.init1;
+        function setupInitSensor(initNum) {
+            const config = sensorConfig[`init${initNum}`];
             const basePath = config.basePath;
-            const sensorKey = 'init1';
+            const sensorKey = `init${initNum}`;
             const latestPath = `${basePath}/latest`;
             
             console.log(`Setting up ${sensorKey}: ${latestPath}`);
@@ -709,7 +725,7 @@
                 }
             });
             
-            load24hStatsInit(sensorKey, basePath);
+            load24hStatsBox(sensorKey, basePath);
         }
         
         function updateSensorStatus(sensorKey, age) {
@@ -861,13 +877,13 @@
         function controlInit(enable) {
             const config = sensorConfig.init1;
             const basePath = config.basePath;
-            const sensorKey = 'init1';
+            const sensorKey = `init${initNum}`;
             const controlPath = `control/${basePath}/enabled`;
             
             database.ref(controlPath).set(enable)
                 .then(() => {
                     addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
-                    alert(`Init ${enable ? 'enabled' : 'disabled'} successfully!`);
+                    alert(`init ${initNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
                 })
                 .catch((error) => {
                     addLog(sensorKey, `Control failed: ${error.message}`);
@@ -881,30 +897,32 @@
             console.log('Firebase paths:');
             console.log('- Tabung: tabungX/P1/latest, tabungX/P2/latest');
             console.log('- Box: boxX/latest');
-            console.log('- Init: init1/latest');
+            console.log('- Init: initX/latest');
             console.log('- Control: control/tabungX/P1/enabled, control/tabungX/P2/enabled');
             
             generateTabungStatusCards();
             generateBoxStatusCards();
             generateInitStatusCard();
             
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 setupTabungSensor(i);
                 setupBoxSensor(i);
+                setupInitSensor();
             }
-            setupInitSensor();
         }
         
         // Auto-refresh stats every 5 minutes
         setInterval(() => {
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 const tabungConfig = sensorConfig[`tabung${i}`];
                 load24hStatsTabung(`tabung${i}`, tabungConfig.tabungName);
                 
                 const boxConfig = sensorConfig[`box${i}`];
                 load24hStatsBox(`box${i}`, boxConfig.basePath);
+
+                const initConfig = sensorConfig[`init${i}`];
+                load24hStatsBox(`init${i}`, boxConfig.basePath);
             }
-            load24hStatsInit('init1', sensorConfig.init1.basePath);
         }, 5 * 60 * 1000);
         
         init();
