@@ -331,8 +331,8 @@
             
             <div class="sensor-type-tabs">
                 <div class="type-tab active" onclick="selectSensorType('tabung')">🧪 Tabung (1-6)</div>
-                <div class="type-tab" onclick="selectSensorType('box')">📦 Box (1-6)</div>
-                <div class="type-tab" onclick="selectSensorType('init')">🎯 Init</div>
+                <div class="type-tab" onclick="selectSensorType('box')">📦 Box (1-12)</div>
+                <div class="type-tab" onclick="selectSensorType('init')">🎯 Init 1-2</div>
             </div>
             
             <div class="sensor-select-grid" id="sensorSelectGrid">
@@ -441,10 +441,18 @@
                 3: { name: "Box 3", basePath: "box3", color: "#f97316" },
                 4: { name: "Box 4", basePath: "box4", color: "#dc2626" },
                 5: { name: "Box 5", basePath: "box5", color: "#7c3aed" },
-                6: { name: "Box 6", basePath: "box6", color: "#db2777" }
+                6: { name: "Box 6", basePath: "box6", color: "#db2777" },
+		7: { name: "Box 7", basePath: "box7", color: "#06b6d4" },
+                8: { name: "Box 8", basePath: "box8", color: "#84cc16" },
+                9: { name: "Box 9", basePath: "box9", color: "#f97316" },
+                10: { name: "Box 10", basePath: "box10", color: "#dc2626" },
+                11: { name: "Box 11", basePath: "box11", color: "#7c3aed" },
+                12: { name: "Box 12", basePath: "box12", color: "#db2777" }
+
             },
             init: {
-                1: { name: "Kondisi Awal", basePath: "init1", color: "#6366f1" }
+                1: { name: "Kondisi Awal", basePath: "init1", color: "#6366f1" },
+                2: { name: "Kondisi Awal 2", basePath: "init2", color: "#6366f1" }
             }
         };
         
@@ -825,7 +833,7 @@
             console.log('Firebase paths:');
             console.log('- Tabung: tabungX/P1/history, tabungX/P2/history');
             console.log('- Box: boxX/history');
-            console.log('- Init: init1/history');
+            console.log('- Init: initX/history');
             
             const today = new Date();
             const lastWeek = new Date();
