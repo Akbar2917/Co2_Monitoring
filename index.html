@@ -264,9 +264,30 @@
         
         .box-6 .cluster-name { color: #db2777; }
         .box-6 .cluster-header { border-bottom-color: #db2777; }
+	
+	.box-7 .cluster-name { color: #06b6d4; }
+        .box-7 .cluster-header { border-bottom-color: #06b6d4; }
+        
+        .box-8 .cluster-name { color: #84cc16; }
+        .box-8 .cluster-header { border-bottom-color: #84cc16; }
+        
+        .box-9 .cluster-name { color: #f97316; }
+        .box-9 .cluster-header { border-bottom-color: #f97316; }
+        
+        .box-10 .cluster-name { color: #dc2626; }
+        .box-10 .cluster-header { border-bottom-color: #dc2626; }
+        
+        .box-11 .cluster-name { color: #7c3aed; }
+        .box-11 .cluster-header { border-bottom-color: #7c3aed; }
+        
+        .box-12 .cluster-name { color: #db2777; }
+        .box-12 .cluster-header { border-bottom-color: #db2777; }
         
         .init-card .cluster-name { color: #6366f1; }
         .init-card .cluster-header { border-bottom-color: #6366f1; }
+
+        .init2-card .cluster-name { color: #6366f1; }
+        .init2-card .cluster-header { border-bottom-color: #6366f1; }
         
         @media (max-width: 768px) {
             .cluster-grid {
@@ -296,7 +317,7 @@
         
         <div class="header">
             <h1>🌱 CO2 Monitoring Dashboard</h1>
-            <p>Real-time Multi-Cluster Monitoring System (6 Tabung, 6 Box, 1 Init)</p>
+            <p>Real-time Multi-Cluster Monitoring System (6 Tabung, 12 Box, 2 Init)</p>
             <div class="status-badges" id="statusBadges">
                 <!-- Status badges will be generated dynamically -->
             </div>
@@ -313,11 +334,11 @@
         
         <!-- BOX SECTION -->
         <div class="section-title">
-            📦 Box Sensors (1-6)
+            📦 Box Sensors (1-12)
         </div>
         
         <div class="cluster-grid" id="boxGrid">
-            <!-- Box 1-6 cards will be generated dynamically -->
+            <!-- Box 1-12 cards will be generated dynamically -->
         </div>
         
         <!-- INIT SECTION -->
@@ -326,7 +347,7 @@
         </div>
         
         <div class="cluster-grid init-section" id="initGrid">
-            <!-- Init 1 card will be generated dynamically -->
+            <!-- Init 1-2 card will be generated dynamically -->
         </div>
         
         <!-- COMBINED CHART -->
@@ -354,9 +375,17 @@
                             <option value="box4">Box 4</option>
                             <option value="box5">Box 5</option>
                             <option value="box6">Box 6</option>
+			    <option value="box1">Box 7</option>
+                            <option value="box2">Box 8</option>
+                            <option value="box3">Box 9</option>
+                            <option value="box4">Box 10</option>
+                            <option value="box5">Box 11</option>
+                            <option value="box6">Box 12</option>
+
                         </optgroup>
                         <optgroup label="Init">
                             <option value="init1">Init 1</option>
+                            <option value="init2">Init 2</option>
                         </optgroup>
                     </select>
                     <button class="chart-btn" onclick="changeTimeRange(1)">1h</button>
@@ -434,8 +463,16 @@
             box4: { basePath: "box4", color: "#dc2626" },
             box5: { basePath: "box5", color: "#7c3aed" },
             box6: { basePath: "box6", color: "#db2777" },
+	    box7: { basePath: "box7", color: "#06b6d4" },
+            box8: { basePath: "box8", color: "#84cc16" },
+            box9: { basePath: "box9", color: "#f97316" },
+            box10: { basePath: "box10", color: "#dc2626" },
+            box11: { basePath: "box11", color: "#7c3aed" },
+            box12: { basePath: "box12", color: "#db2777" },
+
             // Init - format: init1/latest
-            init1: { basePath: "init1", color: "#6366f1" }
+            init1: { basePath: "init1", color: "#6366f1" },
+            init2: { basePath: "init2", color: "#6366f1" }
         };
         
         // State management
@@ -489,7 +526,7 @@
             const grid = document.getElementById('boxGrid');
             let html = '';
             
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 html += `
                 <div class="cluster-card box-${i}">
                     <div class="cluster-header">
@@ -513,21 +550,27 @@
         // Generate Init card
         function generateInitCards() {
             const grid = document.getElementById('initGrid');
-            grid.innerHTML = `
-                <div class="cluster-card init-card">
+           let html = '';
+            
+            for (let i = 1; i <= 2; i++) {
+                html += `
+                <div class="cluster-card init-${i}">
                     <div class="cluster-header">
-                        <div class="cluster-name">🎯 Kondisi Awal</div>
-                        <span class="cluster-status status-offline" id="statusInit1">Offline</span>
+                        <div class="cluster-name">📦 Init ${i}</div>
+                        <span class="cluster-status status-offline" id="statusInit${i}">Offline</span>
                     </div>
                     <div class="sensor-row">
                         <div class="sensor-item" style="grid-column: span 3;">
                             <div class="sensor-label">CO2 Level</div>
-                            <div class="sensor-value" id="init1Value">--</div>
+                            <div class="sensor-value" id="init${i}Value">--</div>
                             <div class="sensor-unit">ppm</div>
                         </div>
                     </div>
-                    <div class="sensor-status status-good" id="init1Status">Loading...</div>
+                    <div class="sensor-status status-good" id="init${i}Status">Loading...</div>
                 </div>`;
+            }
+            
+            grid.innerHTML = html;
         }
         
         // Generate status badges
@@ -535,16 +578,18 @@
             const container = document.getElementById('statusBadges');
             let html = '';
             
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 html += `<span class="status-badge status-offline" id="badgeT${i}">T${i}: Offline</span>`;
             }
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 12; i++) {
                 html += `<span class="status-badge status-offline" id="badgeB${i}">B${i}: Offline</span>`;
             }
-            html += `<span class="status-badge status-offline" id="badgeInit">Init: Offline</span>`;
+            for (let i = 1; i <= 2; i++) {
+                html += `<span class="status-badge status-offline" id="badgeI${i}">I${i}: Offline</span>`;
             
             container.innerHTML = html;
         }
+    }
         
         // Helper function to get CO2 status
         function updateStatusIndicator(ppm) {
@@ -789,7 +834,7 @@
         
         // Setup Init sensor
         function setupInitSensor() {
-            const config = sensorConfig.init1;
+            const config = sensorConfig[`init${initNum}`];
             const latestPath = `${config.basePath}/latest`;
             
             console.log(`Setting up Init at path: ${latestPath}`);
@@ -830,16 +875,17 @@
             });
             
             // Initialize storage
-            if (!sensorData.init1) {
-                sensorData.init1 = [];
+
+            if (!sensorData[`init${initNum}`]) {
+                sensorData[`init${initNum}`] = [];
             }
             
-            loadInitHistory();
+            loadBoxHistory(initNum);
         }
         
         // Load Init History
         function loadInitHistory() {
-            const config = sensorConfig.init1;
+            const config = sensorConfig[`init${initNum}`];
             const historyPath = `${config.basePath}/history`;
             const cutoff = Date.now() - (24 * 60 * 60 * 1000);
             
@@ -862,7 +908,7 @@
                     data.sort((a, b) => a.timestamp - b.timestamp);
                     sensorData.init1 = data;
                     
-                    if (currentChartSensor === 'init1') {
+                    if (currentChartSensor === `init${initNum}`) {
                         updateMainChart();
                     }
                 });
