@@ -375,13 +375,12 @@
                             <option value="box4">Box 4</option>
                             <option value="box5">Box 5</option>
                             <option value="box6">Box 6</option>
-			    <option value="box1">Box 7</option>
-                            <option value="box2">Box 8</option>
-                            <option value="box3">Box 9</option>
-                            <option value="box4">Box 10</option>
-                            <option value="box5">Box 11</option>
-                            <option value="box6">Box 12</option>
-
+			                <option value="box7">Box 7</option>
+                            <option value="box8">Box 8</option>
+                            <option value="box9">Box 9</option>
+                            <option value="box10">Box 10</option>
+                            <option value="box11">Box 11</option>
+                            <option value="box12">Box 12</option>
                         </optgroup>
                         <optgroup label="Init">
                             <option value="init1">Init 1</option>
@@ -463,7 +462,7 @@
             box4: { basePath: "box4", color: "#dc2626" },
             box5: { basePath: "box5", color: "#7c3aed" },
             box6: { basePath: "box6", color: "#db2777" },
-	    box7: { basePath: "box7", color: "#06b6d4" },
+	        box7: { basePath: "box7", color: "#06b6d4" },
             box8: { basePath: "box8", color: "#84cc16" },
             box9: { basePath: "box9", color: "#f97316" },
             box10: { basePath: "box10", color: "#dc2626" },
@@ -832,87 +831,86 @@
                 });
         }
         
-        // Setup Init sensor
-        function setupInitSensor() {
-            const config = sensorConfig[`init${initNum}`];
-            const latestPath = `${config.basePath}/latest`;
+ // Setup Init sensor
+function setupInitSensor(initNum) {  // TAMBAH PARAMETER initNum
+    const config = sensorConfig[`init${initNum}`];
+    const latestPath = `${config.basePath}/latest`;
+    
+    console.log(`Setting up Init ${initNum} at path: ${latestPath}`);
+    
+    database.ref(latestPath).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const ppm = Math.round(data.co2 || data.value || 0);
+            const timestamp = data.timestamp || data.ts || Date.now();
+            const age = Math.round((Date.now() - timestamp) / 1000);
             
-            console.log(`Setting up Init at path: ${latestPath}`);
+            document.getElementById(`init${initNum}Value`).textContent = ppm;
             
-            database.ref(latestPath).on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ppm = Math.round(data.co2 || data.value || 0);
-                    const timestamp = data.timestamp || data.ts || Date.now();
-                    const age = Math.round((Date.now() - timestamp) / 1000);
-                    
-                    document.getElementById('init1Value').textContent = ppm;
-                    
-                    const status = updateStatusIndicator(ppm);
-                    const statusEl = document.getElementById('init1Status');
-                    statusEl.textContent = status.text;
-                    statusEl.className = `sensor-status ${status.class}`;
-                    
-                    const clusterStatus = document.getElementById('statusInit1');
-                    const badgeEl = document.getElementById('badgeInit');
-                    
-                    if (age < 120) {
-                        clusterStatus.textContent = 'Online';
-                        clusterStatus.className = 'cluster-status status-online';
-                        if (badgeEl) {
-                            badgeEl.textContent = 'Init: Online';
-                            badgeEl.className = 'status-badge status-online';
-                        }
-                    } else {
-                        clusterStatus.textContent = 'Offline';
-                        clusterStatus.className = 'cluster-status status-offline';
-                        if (badgeEl) {
-                            badgeEl.textContent = 'Init: Offline';
-                            badgeEl.className = 'status-badge status-offline';
-                        }
-                    }
+            const status = updateStatusIndicator(ppm);
+            const statusEl = document.getElementById(`init${initNum}Status`);
+            statusEl.textContent = status.text;
+            statusEl.className = `sensor-status ${status.class}`;
+            
+            const clusterStatus = document.getElementById(`statusInit${initNum}`);
+            const badgeEl = document.getElementById(`badgeI${initNum}`);
+            
+            if (age < 120) {
+                clusterStatus.textContent = 'Online';
+                clusterStatus.className = 'cluster-status status-online';
+                if (badgeEl) {
+                    badgeEl.textContent = `I${initNum}: Online`;
+                    badgeEl.className = 'status-badge status-online';
+                }
+            } else {
+                clusterStatus.textContent = 'Offline';
+                clusterStatus.className = 'cluster-status status-offline';
+                if (badgeEl) {
+                    badgeEl.textContent = `I${initNum}: Offline`;
+                    badgeEl.className = 'status-badge status-offline';
+                }
+            }
+        }
+    });
+    
+    // Initialize storage
+    if (!sensorData[`init${initNum}`]) {
+        sensorData[`init${initNum}`] = [];
+    }
+    
+    loadInitHistory(initNum);
+}
+        
+        // Load Init History
+function loadInitHistory(initNum) {  // TAMBAH PARAMETER initNum
+    const config = sensorConfig[`init${initNum}`];
+    const historyPath = `${config.basePath}/history`;
+    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+    
+    database.ref(historyPath)
+        .limitToLast(1500)
+        .once('value')
+        .then((snapshot) => {
+            const data = [];
+            
+            snapshot.forEach((child) => {
+                const d = child.val();
+                const co2 = d.co2 || d.value;
+                const timestamp = d.ts || d.timestamp;
+                
+                if (d && co2 && timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
+                    data.push({ timestamp: timestamp, value: co2 });
                 }
             });
             
-            // Initialize storage
-
-            if (!sensorData[`init${initNum}`]) {
-                sensorData[`init${initNum}`] = [];
+            data.sort((a, b) => a.timestamp - b.timestamp);
+            sensorData[`init${initNum}`] = data;
+            
+            if (currentChartSensor === `init${initNum}`) {
+                updateMainChart();
             }
-            
-            loadBoxHistory(initNum);
-        }
-        
-        // Load Init History
-        function loadInitHistory() {
-            const config = sensorConfig[`init${initNum}`];
-            const historyPath = `${config.basePath}/history`;
-            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-            
-            database.ref(historyPath)
-                .limitToLast(1500)
-                .once('value')
-                .then((snapshot) => {
-                    const data = [];
-                    
-                    snapshot.forEach((child) => {
-                        const d = child.val();
-                        const co2 = d.co2 || d.value;
-                        const timestamp = d.ts || d.timestamp;
-                        
-                        if (d && co2 && timestamp >= cutoff && co2 >= 200 && co2 <= 5000) {
-                            data.push({ timestamp: timestamp, value: co2 });
-                        }
-                    });
-                    
-                    data.sort((a, b) => a.timestamp - b.timestamp);
-                    sensorData.init1 = data;
-                    
-                    if (currentChartSensor === `init${initNum}`) {
-                        updateMainChart();
-                    }
-                });
-        }
+        });
+}
         
         // Chart functions
         function initMainChart() {
@@ -1084,26 +1082,38 @@
             generateStatusBadges();
             initMainChart();
             
-            // Setup all sensors
-            for (let i = 1; i <= 6; i++) {
-                setupTabungSensor(i);
-                setupBoxSensor(i);
-            }
-            setupInitSensor();
+// Setup all sensors
+for (let i = 1; i <= 6; i++) {
+    setupTabungSensor(i);
+}
+
+// Setup Box 1-12
+for (let i = 1; i <= 12; i++) {
+    setupBoxSensor(i);
+}
+
+// Setup Init 1-2
+for (let i = 1; i <= 2; i++) {
+    setupInitSensor(i);
+}
             
             // Initial chart update
             setTimeout(updateMainChart, 2000);
         }
         
         // Auto-refresh history every 5 minutes
-        setInterval(() => {
-            for (let i = 1; i <= 6; i++) {
-                loadTabungHistory(i, 'P1');
-                loadTabungHistory(i, 'P2');
-                loadBoxHistory(i);
-            }
-            loadInitHistory();
-        }, 5 * 60 * 1000);
+       setInterval(() => {
+    for (let i = 1; i <= 6; i++) {
+        loadTabungHistory(i, 'P1');
+        loadTabungHistory(i, 'P2');
+    }
+    for (let i = 1; i <= 12; i++) {
+        loadBoxHistory(i);
+    }
+    for (let i = 1; i <= 2; i++) {
+        loadInitHistory(i);
+    }
+}, 5 * 60 * 1000);
         
         // Start
         init();
