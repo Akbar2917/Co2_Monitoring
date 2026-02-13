@@ -255,7 +255,7 @@
         
         /* Init section - single column */
         .init-section {
-            max-width: 400px;
+            max-width: 800px;
         }
         
         @media (max-width: 768px) {
@@ -283,7 +283,7 @@
         
         <div class="header">
             <h1>🔧 Sensor Status & Control</h1>
-            <p>Monitor and control all sensors (6 Tabung, 6 Box, 2 Init)</p>
+            <p>Monitor and control all sensors (6 Tabung, 12 Box, 2 Init)</p>
         </div>
         
         <!-- TABUNG SECTION -->
@@ -322,14 +322,10 @@
         // ========================================
         // SENSOR CONFIGURATION - SESUAI ARDUINO
         // ========================================
-        // Arduino path: tabung2/P1/latest, tabung2/P2/latest
-        // Control path: control/tabung2/P1/enabled, control/tabung2/P2/enabled
-        // ========================================
-        
         const sensorConfig = {
             // Tabung 1-6 - path: tabungX/P1 dan tabungX/P2
             tabung1: { tabungName: "tabung1" },
-            tabung2: { tabungName: "tabung2" },  // INI YANG AKTIF
+            tabung2: { tabungName: "tabung2" },
             tabung3: { tabungName: "tabung3" },
             tabung4: { tabungName: "tabung4" },
             tabung5: { tabungName: "tabung5" },
@@ -341,13 +337,12 @@
             box4: { basePath: "box4" },
             box5: { basePath: "box5" },
             box6: { basePath: "box6" },
-	    box7: { basePath: "box7" },
+            box7: { basePath: "box7" },
             box8: { basePath: "box8" },
             box9: { basePath: "box9" },
             box10: { basePath: "box10" },
             box11: { basePath: "box11" },
             box12: { basePath: "box12" },
-
             // Init - path: init1/latest
             init1: { basePath: "init1" },
             init2: { basePath: "init2" }
@@ -518,7 +513,7 @@
         }
         
         // Generate Init status card
-        function generateInitStatusCard() {
+        function generateInitStatusCards() {
             const grid = document.getElementById('initStatusGrid');
             let html = '';
             
@@ -528,7 +523,7 @@
                 <div class="sensor-card init-card">
                     <div class="sensor-header">
                         <div>
-                            <div class="sensor-name">📦 Init ${i}</div>
+                            <div class="sensor-name">🎯 Init ${i}</div>
                             <div class="sensor-id">Path: ${config.basePath}/latest</div>
                         </div>
                         <span class="status-badge status-offline" id="status_init${i}">
@@ -725,7 +720,7 @@
                 }
             });
             
-            load24hStatsBox(sensorKey, basePath);
+            load24hStatsInit(sensorKey, basePath);
         }
         
         function updateSensorStatus(sensorKey, age) {
@@ -874,8 +869,8 @@
                 });
         }
         
-        function controlInit(enable) {
-            const config = sensorConfig.init1;
+        function controlInit(initNum, enable) {
+            const config = sensorConfig[`init${initNum}`];
             const basePath = config.basePath;
             const sensorKey = `init${initNum}`;
             const controlPath = `control/${basePath}/enabled`;
@@ -883,7 +878,7 @@
             database.ref(controlPath).set(enable)
                 .then(() => {
                     addLog(sensorKey, `Control: ${enable ? 'ENABLE' : 'DISABLE'}`);
-                    alert(`init ${initNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
+                    alert(`Init ${initNum} ${enable ? 'enabled' : 'disabled'} successfully!`);
                 })
                 .catch((error) => {
                     addLog(sensorKey, `Control failed: ${error.message}`);
@@ -902,26 +897,39 @@
             
             generateTabungStatusCards();
             generateBoxStatusCards();
-            generateInitStatusCard();
+            generateInitStatusCards();
             
-            for (let i = 1; i <= 12; i++) {
+            // Setup Tabung sensors (1-6)
+            for (let i = 1; i <= 6; i++) {
                 setupTabungSensor(i);
+            }
+            
+            // Setup Box sensors (1-12)
+            for (let i = 1; i <= 12; i++) {
                 setupBoxSensor(i);
-                setupInitSensor();
+            }
+            
+            // Setup Init sensors (1-2)
+            for (let i = 1; i <= 2; i++) {
+                setupInitSensor(i);
             }
         }
         
         // Auto-refresh stats every 5 minutes
         setInterval(() => {
-            for (let i = 1; i <= 12; i++) {
+            for (let i = 1; i <= 6; i++) {
                 const tabungConfig = sensorConfig[`tabung${i}`];
                 load24hStatsTabung(`tabung${i}`, tabungConfig.tabungName);
-                
+            }
+            
+            for (let i = 1; i <= 12; i++) {
                 const boxConfig = sensorConfig[`box${i}`];
                 load24hStatsBox(`box${i}`, boxConfig.basePath);
-
+            }
+            
+            for (let i = 1; i <= 2; i++) {
                 const initConfig = sensorConfig[`init${i}`];
-                load24hStatsBox(`init${i}`, boxConfig.basePath);
+                load24hStatsInit(`init${i}`, initConfig.basePath);
             }
         }, 5 * 60 * 1000);
         
