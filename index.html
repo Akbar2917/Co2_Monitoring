@@ -246,6 +246,18 @@
         
         .tabung-6 .cluster-name { color: #ec4899; }
         .tabung-6 .cluster-header { border-bottom-color: #ec4899; }
+
+		.tabung-7 .cluster-name { color: #f59e0b; }
+        .tabung-7 .cluster-header { border-bottom-color: #f59e0b; }
+        
+        .tabung-8 .cluster-name { color: #ef4444; }
+        .tabung-8 .cluster-header { border-bottom-color: #ef4444; }
+        
+        .tabung-9 .cluster-name { color: #8b5cf6; }
+        .tabung-9 .cluster-header { border-bottom-color: #8b5cf6; }
+        
+        .tabung-10 .cluster-name { color: #ec4899; }
+        .tabung-10 .cluster-header { border-bottom-color: #ec4899; }
         
         .box-1 .cluster-name { color: #06b6d4; }
         .box-1 .cluster-header { border-bottom-color: #06b6d4; }
@@ -325,11 +337,11 @@
         
         <!-- TABUNG SECTION -->
         <div class="section-title">
-            🧪 Tabung Sensors (1-6)
+            🧪 Tabung Sensors (1-10)
         </div>
         
         <div class="cluster-grid" id="tabungGrid">
-            <!-- Tabung 1-6 cards will be generated dynamically -->
+            <!-- Tabung 1-10 cards will be generated dynamically -->
         </div>
         
         <!-- BOX SECTION -->
@@ -367,6 +379,10 @@
                             <option value="tabung4">Tabung 4</option>
                             <option value="tabung5">Tabung 5</option>
                             <option value="tabung6">Tabung 6</option>
+							<option value="tabung7">Tabung 7</option>
+                            <option value="tabung8">Tabung 8</option>
+                            <option value="tabung9">Tabung 9</option>
+                            <option value="tabung10">Tabung 10</option>
                         </optgroup>
                         <optgroup label="Box">
                             <option value="box1">Box 1</option>
@@ -455,6 +471,26 @@
                 p1: { color: "#ec4899" },
                 p2: { color: "#f472b6" }
             },
+			tabung7: {
+                tabungName: "tabung7",
+                p1: { color: "#f59e0b" },
+                p2: { color: "#fbbf24" }
+            },
+            tabung8: {
+                tabungName: "tabung8",
+                p1: { color: "#ef4444" },
+                p2: { color: "#f87171" }
+            },
+            tabung9: {
+                tabungName: "tabung9",
+                p1: { color: "#8b5cf6" },
+                p2: { color: "#a78bfa" }
+            },
+            tabung10: {
+                tabungName: "tabung10",
+                p1: { color: "#ec4899" },
+                p2: { color: "#f472b6" }
+            },
             // Box 1-6 - format: boxX/latest
             box1: { basePath: "box1", color: "#06b6d4" },
             box2: { basePath: "box2", color: "#84cc16" },
@@ -486,7 +522,7 @@
             const grid = document.getElementById('tabungGrid');
             let html = '';
             
-            for (let i = 1; i <= 6; i++) {
+            for (let i = 1; i <= 10; i++) {
                 html += `
                 <div class="cluster-card tabung-${i}">
                     <div class="cluster-header">
@@ -577,7 +613,7 @@
             const container = document.getElementById('statusBadges');
             let html = '';
             
-            for (let i = 1; i <= 12; i++) {
+            for (let i = 1; i <= 10; i++) {
                 html += `<span class="status-badge status-offline" id="badgeT${i}">T${i}: Offline</span>`;
             }
             for (let i = 1; i <= 12; i++) {
@@ -1083,7 +1119,7 @@ function loadInitHistory(initNum) {  // TAMBAH PARAMETER initNum
             initMainChart();
             
 // Setup all sensors
-for (let i = 1; i <= 6; i++) {
+for (let i = 1; i <= 10; i++) {
     setupTabungSensor(i);
 }
 
